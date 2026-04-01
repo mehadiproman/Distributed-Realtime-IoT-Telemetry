@@ -216,6 +216,7 @@ async def handle_search(sid, data):
                 "light_intensity": float(r.get("light_intensity", 0))
             })
 
+        
         print(f"Emitting recRange with {len(formatted)} records to {sid}")
         await sio.emit('recRange', formatted, to=sid)
     except Exception as e:
