@@ -38,6 +38,17 @@ async def init_db():
                 air_quality NUMERIC,
                 light_intensity NUMERIC
             );
+            CREATE TABLE IF NOT EXISTS soil_data (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMPTZ DEFAULT NOW(),
+                moisture NUMERIC
+            );
+            CREATE TABLE IF NOT EXISTS pump_events (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMPTZ DEFAULT NOW(),
+                state VARCHAR(10),
+                trigger_type VARCHAR(20)
+            );
         """)
 
 async def get_all_sensor_data(limit=100):
@@ -54,9 +65,9 @@ async def get_sensor_data_within_range(time_start_hrs: float, time_end_hrs: floa
     async with pool.acquire() as conn:
         records = await conn.fetch("""
             SELECT * FROM sensor_data
-            WHERE timestamp >= NOW() - $1::interval
+            WHERE timestamp >= NOW() - (interval '1 hour' * $1)
             ORDER BY timestamp DESC;
-        """, timedelta(hours=time_end_hrs))
+        """, time_end_hrs)
         return [_format_record(r) for r in records]
 
 async def create_sensor_data(data: dict):
@@ -77,4 +88,23 @@ async def create_sensor_data(data: dict):
 async def delete_sensor_data(record_id: int):
     async with pool.acquire() as conn:
         record = await conn.fetchrow("DELETE FROM sensor_data WHERE id = $1 RETURNING *;", record_id)
+        return _format_record(record)
+
+async def create_soil_data(moisture: float):
+    async with pool.acquire() as conn:
+        record = await conn.fetchrow(
+            "INSERT INTO soil_data (moisture) VALUES ($1) RETURNING *;", moisture
+        )
+        return _format_record(record)
+
+async def get_all_soil_data(limit=100):
+    async with pool.acquire() as conn:
+        records = await conn.fetch("SELECT * FROM soil_data ORDER BY timestamp DESC LIMIT $1;", limit)
+        return [_format_record(r) for r in records]
+
+async def log_pump_event(state: str, trigger: str):
+    async with pool.acquire() as conn:
+        record = await conn.fetchrow(
+            "INSERT INTO pump_events (state, trigger_type) VALUES ($1, $2) RETURNING *;", state, trigger
+        )
         return _format_record(record)

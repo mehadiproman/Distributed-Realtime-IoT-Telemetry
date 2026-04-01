@@ -16,7 +16,8 @@ const int tempPin   =    32;
 const int presPin   =    33;
 const int airPin    =    12;
 const int lightPin  =    14;
-
+const int SOIL_PIN  =    34;
+const int RELAY_PIN =    26;
 
 Servo myServo; // create a servo object
 int servoPin = 13;
@@ -26,6 +27,9 @@ int servoPin = 13;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+unsigned long pump_off_time = 0;
+bool is_pump_on = false;
+unsigned long last_publish = 0;
 
 void setup_wifi(){
   delay(10);
@@ -55,6 +59,7 @@ void reconnect(){
 
       // suscribe to the topic from the broker
       client.subscribe("esp/cmd");
+      client.subscribe("home/pump/cmd");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -82,6 +87,26 @@ void callback(char * topic, byte * payload, unsigned int length){
     Serial.println("Received message: " + message);
     // Add code here to handle specific commands
     parseStr(message);
+  } else if (String(topic) == "home/pump/cmd") {
+    Serial.println("Pump Command: " + message);
+    int commaIndex = message.indexOf(',');
+    String state = message;
+    int duration = 30; // default 30s
+    if (commaIndex != -1) {
+      state = message.substring(0, commaIndex);
+      duration = message.substring(commaIndex + 1).toInt();
+    }
+    
+    if (state == "ON") {
+      digitalWrite(RELAY_PIN, HIGH);
+      is_pump_on = true;
+      pump_off_time = millis() + (duration * 1000);
+      client.publish("home/pump/status", "ON", true);
+    } else {
+      digitalWrite(RELAY_PIN, LOW);
+      is_pump_on = false;
+      client.publish("home/pump/status", "OFF", true);
+    }
   }
 }
 
@@ -132,6 +157,9 @@ void setup() {
   pinMode(presPin, OUTPUT);
   pinMode(airPin, OUTPUT);
   pinMode(lightPin, OUTPUT);
+  pinMode(SOIL_PIN, INPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
 
 }
 
@@ -142,30 +170,46 @@ void loop() {
   }
   client.loop();
 
-  //run_servo();
+  unsigned long current_time = millis();
+  
+  if (is_pump_on && current_time >= pump_off_time) {
+    digitalWrite(RELAY_PIN, LOW);
+    is_pump_on = false;
+    client.publish("home/pump/status", "OFF", true);
+  }
 
-  // Simulate sensor reading
-  // float temperature = 25.0 + (rand() % 100) / 10.0;
-  float temperature = random(0, 100) + random(0, 100) / 100.0; 
-  float pressure = random(0, 1000) + random(0, 100) / 100.0; 
-  float airQuality = random(0, 500) + random(0, 100) / 100.0; 
-  float light = random(0, 100) + random(0, 100) / 100.0; 
-  // String temp_str = String(temperature);
+  if (current_time - last_publish >= 5000) {
+    //run_servo();
 
-   // Combine all sensor values into a single comma-separated string using String()
-  String payload = String(temperature) + "," + 
-                   String(pressure) + "," + 
-                   String(airQuality) + "," + 
-                   String(light);
+    // Simulate sensor reading
+    // float temperature = 25.0 + (rand() % 100) / 10.0;
+    float temperature = random(0, 100) + random(0, 100) / 100.0; 
+    float pressure = random(0, 1000) + random(0, 100) / 100.0; 
+    float airQuality = random(0, 500) + random(0, 100) / 100.0; 
+    float light = random(0, 100) + random(0, 100) / 100.0; 
+    // String temp_str = String(temperature);
 
-  // publish temperature to MQTT topic
-  // client.publish("h/l/t", temp_str.c_str());
-  client.publish("home/sensors/data", payload.c_str());
-  Serial.print("Sensor data sent4: ");
-  Serial.println(payload);
+     // Combine all sensor values into a single comma-separated string using String()
+    String payload = String(temperature) + "," + 
+                     String(pressure) + "," + 
+                     String(airQuality) + "," + 
+                     String(light);
 
-  delay(5000); // Publish every 5 seconds
-
+    // publish temperature to MQTT topic
+    // client.publish("h/l/t", temp_str.c_str());
+    client.publish("home/sensors/data", payload.c_str());
+    Serial.print("Sensor data sent4: ");
+    Serial.println(payload);
+    
+    // Soil moisture reading
+    int raw_val = analogRead(SOIL_PIN);
+    float moisture = map(raw_val, 4095, 0, 0, 100); 
+    if (moisture < 0) moisture = 0;
+    if (moisture > 100) moisture = 100;
+    client.publish("home/sensors/soil", String(moisture).c_str());
+    
+    last_publish = current_time;
+  }
 }
 
 void run_servo(int value){

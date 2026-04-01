@@ -138,6 +138,7 @@
 </head>
 <body>
 
+    
 <header>
     <a href="/graph" class="back-btn"><i class="fa fa-arrow-left"></i> Live Dashboard</a>
     <h1>Sensor History Logs</h1>
@@ -208,51 +209,59 @@
                d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     }
 
-    function executeSearch() {
+    async function executeSearch() {
         const hrs = parseInt(document.getElementById('time_filter').value);
-        socket.emit('searchTimeRange', { timeStart: 0, timeEnd: hrs });
-    }
-
-    socket.on('recRange', (db) => {
-        const tbody = document.getElementById("tableBody");
-        const noDataMsg = document.getElementById("no_data_msg");
-        tbody.innerHTML = '';
         
-        if (!db || db.length === 0) {
-            noDataMsg.style.display = 'block';
-            return;
+        try {
+            const response = await fetch('/api/sensor/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ timeStart: 0, timeEnd: hrs })
+            });
+            const db = await response.json();
+            
+            const tbody = document.getElementById("tableBody");
+            const noDataMsg = document.getElementById("no_data_msg");
+            tbody.innerHTML = '';
+            
+            if (!db || db.length === 0) {
+                noDataMsg.style.display = 'block';
+                return;
+            }
+            
+            noDataMsg.style.display = 'none';
+            
+            db.forEach(item => {
+                const tr = document.createElement('tr');
+                
+                const tdTime = document.createElement('td');
+                tdTime.style.color = '#64d2ff';
+                tdTime.textContent = formatDate(item.timestamp);
+                
+                const tdTemp = document.createElement('td');
+                tdTemp.textContent = item.temperature;
+                
+                const tdPres = document.createElement('td');
+                tdPres.textContent = item.pressure;
+                
+                const tdAir = document.createElement('td');
+                tdAir.textContent = item.air_quality || item.airQuality || '0';
+                
+                const tdLight = document.createElement('td');
+                tdLight.textContent = item.light_intensity || item.lightIntensity || '0';
+                
+                tr.appendChild(tdTime);
+                tr.appendChild(tdTemp);
+                tr.appendChild(tdPres);
+                tr.appendChild(tdAir);
+                tr.appendChild(tdLight);
+                
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error("Filter failed fetching data:", error);
         }
-        
-        noDataMsg.style.display = 'none';
-        
-        db.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            const tdTime = document.createElement('td');
-            tdTime.style.color = '#64d2ff';
-            tdTime.textContent = formatDate(item.timestamp);
-            
-            const tdTemp = document.createElement('td');
-            tdTemp.textContent = item.temperature;
-            
-            const tdPres = document.createElement('td');
-            tdPres.textContent = item.pressure;
-            
-            const tdAir = document.createElement('td');
-            tdAir.textContent = item.air_quality || item.airQuality || '0';
-            
-            const tdLight = document.createElement('td');
-            tdLight.textContent = item.light_intensity || item.lightIntensity || '0';
-            
-            tr.appendChild(tdTime);
-            tr.appendChild(tdTemp);
-            tr.appendChild(tdPres);
-            tr.appendChild(tdAir);
-            tr.appendChild(tdLight);
-            
-            tbody.appendChild(tr);
-        });
-    });
+    }
 </script>
 
 </body>

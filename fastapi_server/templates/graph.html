@@ -15,7 +15,7 @@
             --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.08);
             --purple-gradient: linear-gradient(135deg, #a644ff 0%, #6b00ff 100%);
-            --accent-purple: #a644ff;
+            --accent-purple: hsl(273, 75%, 57%);
         }
 
         body {
@@ -349,6 +349,30 @@
             <div class="card-value"><span id="light_raw">--</span> <span class="card-unit">lux</span></div>
             <div id="light_status" class="card-status status-normal">Waiting...</div>
         </div>
+
+        <!-- Soil Moisture Card -->
+        <div class="glass-card" id="soil_card">
+            <div class="card-header">
+                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-tint"></i> Soil Moisture</h4></a>
+            </div>
+            <div class="card-value"><span id="soil_raw">--</span> <span class="card-unit">%</span></div>
+            <div id="soil_status" class="card-status status-normal">Waiting...</div>
+        </div>
+
+        <!-- Smart Irrigation Card -->
+        <div class="glass-card" id="pump_card" style="border-color: rgba(50,215,75,0.3);">
+            <div class="card-header">
+                <h4 class="card-title"><i class="fa fa-shower"></i> Smart Pump</h4>
+                <label class="switch">
+                    <input id="pump_check" type="checkbox" onchange="togglePump(this)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="card-value" style="font-size: 2.2rem;"><span id="pump_val" style="color:#86868b; transition: 0.3s;">IDLE</span></div>
+            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 5px;">
+                <i class="fa fa-info-circle"></i> Auto mode active (&lt;30%)
+            </div>
+        </div>
     </div>
 
     <div class="section-title">Telemetry Analytics</div>
@@ -656,6 +680,31 @@
     socket.on('sensorData', (data) => {
         setValues(data);
         updatePlot(data);
+    });
+
+    socket.on('soilData', (data) => {
+        let moisture = parseFloat(data.moisture);
+        document.getElementById('soil_raw').innerText = moisture.toFixed(1);
+        
+        let statData = {text: "Good", class: "status-normal"};
+        if(moisture < 30) statData = {text: "Very Dry (Irrigating)", class: "status-danger"};
+        else if(moisture < 45) statData = {text: "Dry", class: "status-warning"};
+        else if(moisture > 80) statData = {text: "Overwatered", class: "status-warning"};
+        
+        applyStatus('soil_status', statData);
+    });
+    
+    function togglePump(checkbox) {
+        socket.emit('pumpCommand', {state: checkbox.checked ? 'ON' : 'OFF', duration: 30});
+    }
+
+    socket.on('pumpData', (data) => {
+        let is_on = data.state === 'ON';
+        document.getElementById('pump_check').checked = is_on;
+        document.getElementById('pump_val').innerText = is_on ? "ACTIVE" : "IDLE";
+        document.getElementById('pump_val').style.color = is_on ? "#32d74b" : "#86868b";
+        document.getElementById('pump_card').style.boxShadow = is_on ? "0 0 25px rgba(50,215,75,0.2)" : "none";
+        document.getElementById('pump_card').style.borderColor = is_on ? "rgba(50,215,75,0.6)" : "rgba(50,215,75,0.3)";
     });
 
     document.querySelectorAll('.sensor-checkbox').forEach(checkbox => {

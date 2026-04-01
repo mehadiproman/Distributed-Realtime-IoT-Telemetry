@@ -9,7 +9,8 @@ import aiomqtt
 # Updated import (important if using structured project)
 from fastapi_server.database import (
     init_db, get_all_sensor_data, get_sensor_data_by_id,
-    get_sensor_data_within_range, create_sensor_data, delete_sensor_data
+    get_sensor_data_within_range, create_sensor_data, delete_sensor_data,
+    create_soil_data, get_all_soil_data, log_pump_event
 )
 
 app = FastAPI()
@@ -61,25 +62,28 @@ async def save_avg_sensor_data(data: dict):
 
 # -------------------- MQTT LOOP --------------------
 
+WATERING_THRESHOLD = 30.0
+AUTO_IRRIGATION_ENABLED = True
+
 async def mqtt_loop():
     while True:
         try:
             async with aiomqtt.Client(hostname=MQTT_BROKER, port=MQTT_PORT) as client:
                 print("Connected to MQTT broker")
 
-                await client.subscribe("home/sensors/data")
+                await client.subscribe("home/sensors/#")
+                await client.subscribe("home/pump/status")
 
                 # ✅ CORRECT FIX
                 async with client.messages() as messages:
                     async for message in messages:
-                        if message.topic.matches("home/sensors/data"):
-                            payload = message.payload.decode()
+                        topic_str = str(message.topic)
+                        payload = message.payload.decode()
+                        
+                        if topic_str == "home/sensors/data":
                             print(f"Received: {payload}")
-
                             try:
                                 vals = payload.split(',')
-
-                                # Safety check
                                 if len(vals) < 4:
                                     raise ValueError("Invalid payload format")
 
@@ -95,6 +99,22 @@ async def mqtt_loop():
 
                             except Exception as parse_err:
                                 print(f"Payload parse error: {parse_err}")
+                                
+                        elif topic_str == "home/sensors/soil":
+                            try:
+                                moisture = float(payload)
+                                await create_soil_data(moisture)
+                                await sio.emit("soilData", {"moisture": moisture})
+                                
+                                # Auto irrigation logic
+                                if AUTO_IRRIGATION_ENABLED and moisture < WATERING_THRESHOLD:
+                                    await client.publish("home/pump/cmd", "ON,20", qos=1)
+                                    await log_pump_event("ON", "AUTO")
+                            except Exception as e:
+                                print(f"Soil payload error: {e}")
+                                
+                        elif topic_str == "home/pump/status":
+                            await sio.emit("pumpData", {"state": payload})
 
         except aiomqtt.MqttError as err:
             print(f"MQTT error: {err}. Reconnecting in 5s...")
@@ -164,18 +184,41 @@ async def handle_checkbox(sid, data):
     except Exception as e:
         print(f"MQTT publish error: {e}")
 
+@sio.on('pumpCommand')
+async def handle_pump_cmd(sid, data):
+    print(f"Manual pump trigger: {data}")
+    state = data.get("state", "OFF")
+    duration = data.get("duration", 30)
+    try:
+        async with aiomqtt.Client(hostname=MQTT_BROKER, port=MQTT_PORT) as client:
+            await client.publish("home/pump/cmd", payload=f"{state},{duration}")
+            await log_pump_event(state, "MANUAL")
+    except Exception as e:
+        print(f"Pump MQTT error: {e}")
+
 @sio.on('searchTimeRange')
 async def handle_search(sid, data):
-    time_start = float(data.get("timeStart", 0))
-    time_end = float(data.get("timeEnd", 0))
+    try:
+        time_start = float(data.get("timeStart", 0))
+        time_end = float(data.get("timeEnd", 0))
 
-    records = await get_sensor_data_within_range(time_start, time_end)
+        records = await get_sensor_data_within_range(time_start, time_end)
 
-    formatted = []
-    for r in records:
-        r_copy = dict(r)
-        if "timestamp" in r_copy and r_copy["timestamp"]:
-            r_copy["timestamp"] = r_copy["timestamp"].isoformat()
-        formatted.append(r_copy)
+        formatted = []
+        for r in records:
+            # Strictly construct primitive dict mapping to avoid hidden Decimal/Datetime serialization crashes
+            formatted.append({
+                "id": int(r.get("id", 0)),
+                "timestamp": r.get("timestamp").isoformat() if r.get("timestamp") else None,
+                "temperature": float(r.get("temperature", 0)),
+                "pressure": float(r.get("pressure", 0)),
+                "air_quality": float(r.get("air_quality", 0)),
+                "light_intensity": float(r.get("light_intensity", 0))
+            })
 
-    await sio.emit('recRange', formatted, to=sid)
+        print(f"Emitting recRange with {len(formatted)} records to {sid}")
+        await sio.emit('recRange', formatted, to=sid)
+    except Exception as e:
+        import traceback
+        print(f"Error in handle_search: {e}")
+        traceback.print_exc()
