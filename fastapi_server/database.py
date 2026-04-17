@@ -23,6 +23,13 @@ def _format_record(r):
         except Exception:
             # Fallback if datetime is mysteriously naive
             d["timestamp"] = d["timestamp"].replace(tzinfo=timezone.utc).astimezone(bst_tz)
+    
+    if d.get("last_seen"):
+        try:
+            d["last_seen"] = d["last_seen"].astimezone(bst_tz)
+        except Exception:
+            d["last_seen"] = d["last_seen"].replace(tzinfo=timezone.utc).astimezone(bst_tz)
+            
     return d
 
 async def init_db():
@@ -49,6 +56,18 @@ async def init_db():
                 state VARCHAR(10),
                 trigger_type VARCHAR(20)
             );
+            CREATE TABLE IF NOT EXISTS device_status (
+                device_id VARCHAR(50) PRIMARY KEY,
+                last_seen TIMESTAMPTZ DEFAULT NOW(),
+                wifi_signal NUMERIC,
+                battery_level NUMERIC,
+                status VARCHAR(20) DEFAULT 'offline'
+            );
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key VARCHAR(50) PRIMARY KEY,
+                value VARCHAR(50)
+            );
+            INSERT INTO system_settings (key, value) VALUES ('pump_mode', 'AUTO') ON CONFLICT DO NOTHING;
         """)
 
 async def get_all_sensor_data(limit=100):
@@ -108,3 +127,60 @@ async def log_pump_event(state: str, trigger: str):
             "INSERT INTO pump_events (state, trigger_type) VALUES ($1, $2) RETURNING *;", state, trigger
         )
         return _format_record(record)
+
+async def update_device_status(device_id: str, wifi: float, battery: float, status: str):
+    async with pool.acquire() as conn:
+        record = await conn.fetchrow("""
+            INSERT INTO device_status (device_id, last_seen, wifi_signal, battery_level, status)
+            VALUES ($1, NOW(), $2, $3, $4)
+            ON CONFLICT (device_id) DO UPDATE SET
+                last_seen = NOW(),
+                wifi_signal = EXCLUDED.wifi_signal,
+                battery_level = EXCLUDED.battery_level,
+                status = EXCLUDED.status
+            RETURNING *;
+        """, device_id, wifi, battery, status)
+        return _format_record(record)
+
+async def mark_offline_devices(timeout_seconds: int):
+    async with pool.acquire() as conn:
+        records = await conn.fetch("""
+            UPDATE device_status
+            SET status = 'offline'
+            WHERE status = 'online' AND NOW() - last_seen > interval '1 second' * $1
+            RETURNING *;
+        """, timeout_seconds)
+        return [_format_record(r) for r in records]
+
+async def get_all_devices():
+    async with pool.acquire() as conn:
+        records = await conn.fetch("SELECT * FROM device_status ORDER BY last_seen DESC;")
+        return [_format_record(r) for r in records]
+
+async def get_pump_mode():
+    async with pool.acquire() as conn:
+        record = await conn.fetchrow("SELECT value FROM system_settings WHERE key = 'pump_mode';")
+        return record['value'] if record else 'AUTO'
+
+async def set_pump_mode(mode: str):
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE system_settings SET value = $1 WHERE key = 'pump_mode';", mode)
+        return mode
+
+async def get_sensor_data_by_date_range(start_dt, end_dt):
+    async with pool.acquire() as conn:
+        records = await conn.fetch("""
+            SELECT * FROM sensor_data
+            WHERE timestamp >= $1 AND timestamp <= $2
+            ORDER BY timestamp ASC;
+        """, start_dt, end_dt)
+        return [_format_record(r) for r in records]
+
+async def get_soil_data_by_date_range(start_dt, end_dt):
+    async with pool.acquire() as conn:
+        records = await conn.fetch("""
+            SELECT * FROM soil_data
+            WHERE timestamp >= $1 AND timestamp <= $2
+            ORDER BY timestamp ASC;
+        """, start_dt, end_dt)
+        return [_format_record(r) for r in records]

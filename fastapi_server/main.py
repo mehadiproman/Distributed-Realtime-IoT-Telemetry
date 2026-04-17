@@ -1,4 +1,5 @@
 import asyncio
+import io
 import os
 import sys
 import time
@@ -8,7 +9,7 @@ if sys.platform == 'win32':
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import socketio
@@ -19,8 +20,12 @@ import httpx
 from fastapi_server.database import (
     init_db, get_all_sensor_data, get_sensor_data_by_id,
     get_sensor_data_within_range, create_sensor_data, delete_sensor_data,
-    create_soil_data, get_all_soil_data, log_pump_event
+    create_soil_data, get_all_soil_data, log_pump_event,
+    update_device_status, mark_offline_devices, get_all_devices,
+    get_pump_mode, set_pump_mode,
+    get_sensor_data_by_date_range, get_soil_data_by_date_range
 )
+from fastapi_server.report_generator import generate_pdf_report
 
 # Load environment variables from .env file
 load_dotenv()
@@ -84,10 +89,12 @@ async def save_avg_sensor_data(data: dict):
 
 # -------------------- MQTT LOOP --------------------
 
-WATERING_THRESHOLD = 30.0
-AUTO_IRRIGATION_ENABLED = True
+PUMP_MODE = "AUTO"
+current_pump_state = "OFF"
+last_auto_toggle_time = 0
 
 async def mqtt_loop():
+    global current_pump_state, last_auto_toggle_time
     while True:
         try:
             async with aiomqtt.Client(hostname=MQTT_BROKER, port=MQTT_PORT) as client:
@@ -95,6 +102,7 @@ async def mqtt_loop():
 
                 await client.subscribe("home/sensors/#")
                 await client.subscribe("home/pump/status")
+                await client.subscribe("home/devices/+/heartbeat")
 
                 # ✅ CORRECT FIX
                 async with client.messages() as messages:
@@ -129,14 +137,33 @@ async def mqtt_loop():
                                 await sio.emit("soilData", {"moisture": moisture})
                                 
                                 # Auto irrigation logic
-                                if AUTO_IRRIGATION_ENABLED and moisture < WATERING_THRESHOLD:
-                                    await client.publish("home/pump/cmd", "ON,20", qos=1)
-                                    await log_pump_event("ON", "AUTO")
+                                if PUMP_MODE == "AUTO":
+                                    now = time.time()
+                                    if now - last_auto_toggle_time > 10:  # 10s cooldown
+                                        if moisture < 30.0 and current_pump_state == "OFF":
+                                            await client.publish("home/pump/cmd", "ON,30", qos=1)
+                                            await log_pump_event("ON", "AUTO")
+                                            last_auto_toggle_time = now
+                                        elif moisture > 60.0 and current_pump_state == "ON":
+                                            await client.publish("home/pump/cmd", "OFF,0", qos=1)
+                                            await log_pump_event("OFF", "AUTO")
+                                            last_auto_toggle_time = now
                             except Exception as e:
                                 print(f"Soil payload error: {e}")
                                 
                         elif topic_str == "home/pump/status":
-                            await sio.emit("pumpData", {"state": payload})
+                            current_pump_state = payload
+                            await sio.emit("pumpData", {"state": payload, "reason": PUMP_MODE})
+                            
+                        elif topic_str.startswith("home/devices/") and topic_str.endswith("/heartbeat"):
+                            try:
+                                device_id = topic_str.split("/")[2]
+                                parts = payload.split(",")
+                                wifi = float(parts[0]) if len(parts) > 0 else 0.0
+                                batt = float(parts[1]) if len(parts) > 1 else 0.0
+                                await update_device_status(device_id, wifi, batt, "online")
+                            except Exception as e:
+                                print(f"Heartbeat parse error: {e}")
 
         except aiomqtt.MqttError as err:
             print(f"MQTT error: {err}. Reconnecting in 5s...")
@@ -148,10 +175,39 @@ async def mqtt_loop():
 
 # -------------------- STARTUP --------------------
 
+async def heartbeat_monitor():
+    while True:
+        try:
+            # Check for offline devices
+            await mark_offline_devices(30)
+            
+            # Fetch and broadcast all device states
+            devices = await get_all_devices()
+            
+            formatted_devices = []
+            for d in devices:
+                formatted_devices.append({
+                    "device_id": d["device_id"],
+                    "last_seen": d["last_seen"].isoformat() if d["last_seen"] else None,
+                    "wifi_signal": float(d["wifi_signal"]) if d["wifi_signal"] is not None else None,
+                    "battery_level": float(d["battery_level"]) if d["battery_level"] is not None else None,
+                    "status": d["status"]
+                })
+            
+            await sio.emit("deviceStatus", formatted_devices)
+            
+            await asyncio.sleep(5)
+        except Exception as e:
+            print(f"Heartbeat monitor error: {e}")
+            await asyncio.sleep(5)
+
 @app.on_event("startup")
 async def startup_event():
+    global PUMP_MODE
     await init_db()
+    PUMP_MODE = await get_pump_mode()
     asyncio.create_task(mqtt_loop())
+    asyncio.create_task(heartbeat_monitor())
 
 # -------------------- ROUTES --------------------
 
@@ -260,11 +316,52 @@ async def get_weather(city: str = Query(default=None)):
             content={"detail": "Weather API error"}
         )
 
+# -------------------- EXPORT ROUTES --------------------
+
+@app.get("/api/export/pdf")
+async def export_pdf(
+    start: str = Query(..., description="Start date YYYY-MM-DD"),
+    end: str = Query(..., description="End date YYYY-MM-DD")
+):
+    """Generate and return a PDF telemetry report for the given date range."""
+    from datetime import datetime, timezone
+    try:
+        start_dt = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        end_dt = datetime.strptime(end, "%Y-%m-%d").replace(
+            hour=23, minute=59, second=59, tzinfo=timezone.utc
+        )
+    except ValueError:
+        return JSONResponse(status_code=400, content={"detail": "Invalid date format. Use YYYY-MM-DD."})
+
+    if start_dt > end_dt:
+        return JSONResponse(status_code=400, content={"detail": "Start date must be before end date."})
+
+    sensor_data = await get_sensor_data_by_date_range(start_dt, end_dt)
+    soil_data = await get_soil_data_by_date_range(start_dt, end_dt)
+
+    pdf_bytes = generate_pdf_report(sensor_data, soil_data, start, end)
+
+    filename = f"IoT_Report_{start}_to_{end}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # -------------------- SOCKET EVENTS --------------------
 
 @sio.on('connect')
 async def connect(sid, environ):
     print("Client connected")
+    await sio.emit('pumpModeUpdate', {"mode": PUMP_MODE}, to=sid)
+
+@sio.on('setPumpMode')
+async def handle_set_pump_mode(sid, data):
+    global PUMP_MODE
+    mode = data.get("mode", "AUTO")
+    PUMP_MODE = mode
+    await set_pump_mode(mode)
+    await sio.emit('pumpModeUpdate', {"mode": mode})
 
 @sio.on('checkBoxData')
 async def handle_checkbox(sid, data):

@@ -74,6 +74,16 @@ void loop() {
 
   client.loop();
 
+  static unsigned long lastHeartbeat = 0;
+  if (millis() - lastHeartbeat >= 5000) {
+    lastHeartbeat = millis();
+    String deviceId = "ESP32-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    String heartbeatTopic = "home/devices/" + deviceId + "/heartbeat";
+    int rssi = WiFi.RSSI();
+    String hbPayload = String(rssi) + ",100";
+    client.publish(heartbeatTopic.c_str(), hbPayload.c_str());
+  }
+
   static unsigned long lastSend = 0;
 
   if (millis() - lastSend >= 2000) {

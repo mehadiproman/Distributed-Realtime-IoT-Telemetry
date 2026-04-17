@@ -426,6 +426,120 @@
                 gap: 20px;
             }
         }
+        /* ── Smart Pump Wide Card ── */
+        .pump-card-wide {
+            grid-column: span 2;
+        }
+
+        .pump-inner {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            grid-template-rows: auto 1fr auto;
+            gap: 0;
+            height: 100%;
+        }
+
+        .pump-top-row {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 20px;
+        }
+
+        .pump-top-row .card-title {
+            font-size: 1.25rem;
+        }
+
+        .mode-toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+        }
+
+        .mode-label {
+            font-size: 0.8rem;
+            color: #86868b;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: color 0.3s ease;
+        }
+
+        .mode-label.active {
+            color: var(--accent-purple);
+        }
+
+        .pump-center {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .pump-state-text {
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            transition: color 0.3s ease;
+            line-height: 1.1;
+        }
+
+        .pump-state-sub {
+            font-size: 0.9rem;
+            color: #86868b;
+        }
+
+        .pump-switch-area {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-left: 30px;
+        }
+
+        .pump-bottom-row {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 18px;
+            border-top: 1px solid var(--glass-border);
+            margin-top: 20px;
+        }
+
+        .pump-rule-text {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pump-rule-text .rule-value {
+            font-weight: 600;
+            color: #64d2ff;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 900px) {
+            .pump-card-wide {
+                grid-column: span 1;
+            }
+            .pump-inner {
+                grid-template-columns: 1fr;
+            }
+            .pump-switch-area {
+                padding-left: 0;
+                padding-top: 16px;
+                justify-content: flex-start;
+            }
+        }
     </style>
 </head>
 <body>
@@ -543,20 +657,83 @@
             <div id="soil_status" class="card-status status-normal">Waiting...</div>
         </div>
 
-        <!-- Smart Irrigation Card -->
-        <div class="glass-card" id="pump_card" style="border-color: rgba(50,215,75,0.3);">
-            <div class="card-header">
-                <h4 class="card-title"><i class="fa fa-shower"></i> Smart Pump</h4>
-                <label class="switch">
-                    <input id="pump_check" type="checkbox" onchange="togglePump(this)">
-                    <span class="slider round"></span>
-                </label>
-            </div>
-            <div class="card-value" style="font-size: 2.2rem;"><span id="pump_val" style="color:#86868b; transition: 0.3s;">IDLE</span></div>
-            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 5px;">
-                <i class="fa fa-info-circle"></i> Auto mode active (&lt;30%)
+        <!-- Smart Irrigation Card (Wide) -->
+        <div class="glass-card pump-card-wide" id="pump_card" style="border-color: rgba(50,215,75,0.3);">
+            <div class="pump-inner">
+                <!-- Top Row: Title + Mode Toggle -->
+                <div class="pump-top-row">
+                    <h4 class="card-title" style="color: #f5f5f7;"><i class="fa fa-shower" style="margin-right: 8px; color: #32d74b;"></i>Smart Pump</h4>
+                    <div class="mode-toggle-group">
+                        <span class="mode-label" id="mode_lbl_manual">MANUAL</span>
+                        <label class="switch" style="width: 44px; height: 24px;">
+                            <input id="mode_check" type="checkbox" onchange="toggleMode(this)">
+                            <span class="slider round" style="border-radius: 24px;"></span>
+                            <style>#mode_check + .slider:before { height: 18px; width: 18px; left: 2px; bottom: 2px; } #mode_check:checked + .slider:before { transform: translateX(20px); }</style>
+                        </label>
+                        <span class="mode-label" id="mode_lbl_auto">AUTO</span>
+                    </div>
+                </div>
+
+                <!-- Center Left: State -->
+                <div class="pump-center">
+                    <div class="pump-state-text" id="pump_val" style="color: #86868b;">IDLE</div>
+                    <div class="pump-state-sub"><i class="fa fa-circle" style="font-size: 8px; margin-right: 6px; vertical-align: middle;"></i>Pump is standing by</div>
+                </div>
+
+                <!-- Center Right: Switch -->
+                <div class="pump-switch-area">
+                    <label class="switch" id="pump_switch_container">
+                        <input id="pump_check" type="checkbox" onchange="togglePump(this)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- Bottom Row: Rule Info -->
+                <div class="pump-bottom-row">
+                    <div class="pump-rule-text">
+                        <i class="fa fa-info-circle"></i>
+                        <span>Control: <span class="rule-value" id="reason_lbl">AUTO</span></span>
+                    </div>
+                    <div class="pump-rule-text" style="color: rgba(255,255,255,0.35); font-size: 0.8rem;">
+                        <i class="fa fa-cog fa-spin" style="animation-duration: 4s;"></i>
+                        Hysteresis &lt;30% ON · &gt;60% OFF
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
+
+    <div class="section-title">Connected Devices</div>
+    <div class="cards-grid" id="devices-container">
+        <div style="color:#86868b; grid-column: 1 / -1; text-align: center;">Waiting for device heartbeats...</div>
+    </div>
+
+    <!-- Report Export Section -->
+    <div class="section-title" style="margin-bottom: 30px;">
+        <span style="display: inline-block; padding: 12px 36px; border: 2px solid transparent; border-radius: 40px; background: linear-gradient(#0d0d12, #0d0d12) padding-box, linear-gradient(135deg, #32d74b 0%, #0a84ff 100%) border-box; box-shadow: 0 0 20px rgba(50, 215, 75, 0.3); color: #f5f5f7; font-size: 1.4rem; font-weight: 600; letter-spacing: 0.5px;">Export Reports</span>
+    </div>
+
+    <div class="glass-card" id="export_card" style="margin-bottom: 50px; max-width: 700px; margin-left: auto; margin-right: auto;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h4 style="font-weight: 600; color: #f5f5f7; font-size: 1.15rem; margin: 0 0 8px 0;"><i class="fa fa-file-pdf-o" style="margin-right: 8px; color: #ff453a;"></i>Generate Telemetry Report</h4>
+            <p style="color: #86868b; font-size: 0.9rem; margin: 0;">Select a date range to export sensor history as a PDF document.</p>
+        </div>
+
+        <div style="display: flex; gap: 16px; align-items: flex-end; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 0.8rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Start Date</label>
+                <input type="date" id="export_start" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 12px 16px; border-radius: 14px; font-size: 1rem; font-family: 'Inter', sans-serif; outline: none; min-width: 180px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 0.8rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">End Date</label>
+                <input type="date" id="export_end" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 12px 16px; border-radius: 14px; font-size: 1rem; font-family: 'Inter', sans-serif; outline: none; min-width: 180px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
+            </div>
+            <button id="export_pdf_btn" onclick="exportPDF()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); border: none; color: white; padding: 12px 28px; border-radius: 14px; font-size: 1rem; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,69,58,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(255,69,58,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,69,58,0.3)'">
+                <i class="fa fa-download"></i> Download PDF
+            </button>
+        </div>
+
+        <div id="export_status" style="text-align: center; font-size: 0.9rem; color: #86868b; display: none;"></div>
     </div>
 
     <div class="section-title">Telemetry Analytics</div>
@@ -886,10 +1063,95 @@
         
         applyStatus('soil_status', statData);
     });
-    
+    socket.on('pumpModeUpdate', (data) => {
+        let is_auto = data.mode === 'AUTO';
+        document.getElementById('mode_check').checked = is_auto;
+        document.getElementById('reason_lbl').innerText = is_auto ? "AUTO (<30% ON, >60% OFF)" : "MANUAL";
+        
+        // Highlight active mode label
+        document.getElementById('mode_lbl_manual').classList.toggle('active', !is_auto);
+        document.getElementById('mode_lbl_auto').classList.toggle('active', is_auto);
+        
+        // Disable manual pump toggle in auto mode
+        document.getElementById('pump_check').disabled = is_auto;
+        document.getElementById('pump_switch_container').style.opacity = is_auto ? '0.4' : '1';
+        document.getElementById('pump_switch_container').style.pointerEvents = is_auto ? 'none' : 'auto';
+    });
+
+    function toggleMode(checkbox) {
+        socket.emit('setPumpMode', {mode: checkbox.checked ? 'AUTO' : 'MANUAL'});
+    }
+
     function togglePump(checkbox) {
         socket.emit('pumpCommand', {state: checkbox.checked ? 'ON' : 'OFF', duration: 30});
     }
+
+    let currentDevices = [];
+
+    socket.on('deviceStatus', (devices) => {
+        currentDevices = devices;
+        renderDevices();
+    });
+
+    function renderDevices() {
+        const container = document.getElementById('devices-container');
+        if (!container) return;
+        
+        if (currentDevices.length === 0) {
+            container.innerHTML = '<div style="color:#86868b; grid-column: 1 / -1; text-align: center;">Waiting for device heartbeats...</div>';
+            return;
+        }
+        
+        let html = '';
+        currentDevices.forEach(device => {
+            const isOnline = device.status === 'online';
+            const statusClass = isOnline ? 'status-normal' : 'status-danger';
+            const borderColor = isOnline ? 'rgba(50,215,75,0.3)' : 'rgba(255,69,58,0.3)';
+            const statusText = isOnline ? 'ONLINE' : 'OFFLINE';
+            
+            const wifi = device.wifi_signal !== null ? `${device.wifi_signal} dBm` : '--';
+            const batt = device.battery_level !== null ? `${device.battery_level}%` : '--';
+            
+            html += `
+            <div class="glass-card" style="border-color: ${borderColor};">
+                <div class="card-header">
+                    <h4 class="card-title" style="color: #f5f5f7;"><i class="fa fa-microchip"></i> ${device.device_id}</h4>
+                    <div class="card-status ${statusClass}">${statusText}</div>
+                </div>
+                <div style="font-size: 0.95rem; color: #86868b; margin-top: 10px;">
+                    <div style="margin-bottom: 5px;"><i class="fa fa-wifi" style="width:20px; text-align:center;"></i> Signal: ${wifi}</div>
+                    <div style="margin-bottom: 10px;"><i class="fa fa-battery-full" style="width:20px; text-align:center;"></i> Battery: ${batt}</div>
+                    <div style="padding-top: 12px; border-top: 1px solid var(--glass-border); font-size: 0.85rem;">
+                        <i class="fa fa-clock-o"></i> Seen: <span class="time-ago" data-time="${device.last_seen}">--</span>
+                    </div>
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+        updateTimeAgo();
+    }
+
+    function updateTimeAgo() {
+        document.querySelectorAll('.time-ago').forEach(el => {
+            const timeStr = el.getAttribute('data-time');
+            if (!timeStr) return;
+            const seenDate = new Date(timeStr);
+            const now = new Date();
+            const diffSecs = Math.floor((now - seenDate) / 1000);
+            
+            if (diffSecs < 5) {
+                el.innerText = 'just now';
+            } else if (diffSecs < 60) {
+                el.innerText = `${diffSecs}s ago`;
+            } else {
+                const diffMins = Math.floor(diffSecs / 60);
+                el.innerText = `${diffMins}m ago`;
+            }
+        });
+    }
+
+    setInterval(updateTimeAgo, 1000);
 
     socket.on('pumpData', (data) => {
         let is_on = data.state === 'ON';
@@ -898,6 +1160,19 @@
         document.getElementById('pump_val').style.color = is_on ? "#32d74b" : "#86868b";
         document.getElementById('pump_card').style.boxShadow = is_on ? "0 0 25px rgba(50,215,75,0.2)" : "none";
         document.getElementById('pump_card').style.borderColor = is_on ? "rgba(50,215,75,0.6)" : "rgba(50,215,75,0.3)";
+        
+        // Update subtitle
+        const sub = document.querySelector('.pump-state-sub');
+        if (sub) {
+            sub.innerHTML = is_on 
+                ? '<i class="fa fa-circle" style="font-size: 8px; margin-right: 6px; vertical-align: middle; color: #32d74b;"></i>Pump is actively running'
+                : '<i class="fa fa-circle" style="font-size: 8px; margin-right: 6px; vertical-align: middle;"></i>Pump is standing by';
+        }
+        
+        if(data.reason) {
+            let is_auto = data.reason === 'AUTO';
+            document.getElementById('reason_lbl').innerText = is_auto ? "AUTO (<30% ON, >60% OFF)" : "MANUAL";
+        }
     });
 
     document.querySelectorAll('.sensor-checkbox').forEach(checkbox => {
@@ -973,6 +1248,78 @@
     fetchWeather();
     // Auto-refresh every 5 minutes (matches cache TTL)
     setInterval(fetchWeather, 300000);
+</script>
+
+<script>
+    // ── Report Export Logic ──
+    (function() {
+        // Auto-set date inputs to sensible defaults
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+
+        const fmt = d => d.toISOString().split('T')[0];
+        document.getElementById('export_start').value = fmt(weekAgo);
+        document.getElementById('export_end').value = fmt(today);
+    })();
+
+    async function exportPDF() {
+        const startVal = document.getElementById('export_start').value;
+        const endVal = document.getElementById('export_end').value;
+        const statusEl = document.getElementById('export_status');
+        const btn = document.getElementById('export_pdf_btn');
+
+        if (!startVal || !endVal) {
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#ff453a';
+            statusEl.innerHTML = '<i class="fa fa-exclamation-triangle"></i> Please select both start and end dates.';
+            return;
+        }
+
+        if (new Date(startVal) > new Date(endVal)) {
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#ff453a';
+            statusEl.innerHTML = '<i class="fa fa-exclamation-triangle"></i> Start date must be before end date.';
+            return;
+        }
+
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Generating...';
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#64d2ff';
+        statusEl.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Querying database and building PDF...';
+
+        try {
+            const response = await fetch(`/api/export/pdf?start=${startVal}&end=${endVal}`);
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Export failed');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `IoT_Report_${startVal}_to_${endVal}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            statusEl.style.color = '#32d74b';
+            statusEl.innerHTML = '<i class="fa fa-check-circle"></i> Report downloaded successfully!';
+            setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+
+        } catch (error) {
+            statusEl.style.color = '#ff453a';
+            statusEl.innerHTML = `<i class="fa fa-times-circle"></i> ${error.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-download"></i> Download PDF';
+        }
+    }
 </script>
 </body>
 </html>

@@ -166,6 +166,26 @@
             </div>
         </div>
         
+        <!-- Report Export Section -->
+        <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; padding: 20px 24px; margin-bottom: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-right: auto;">
+                <i class="fa fa-file-pdf-o" style="color: #ff453a; font-size: 1.3rem;"></i>
+                <span style="font-weight: 600; color: #f5f5f7; font-size: 1rem;">Export Report</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">From</label>
+                <input type="date" id="export_start" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; min-width: 150px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">To</label>
+                <input type="date" id="export_end" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; min-width: 150px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
+            </div>
+            <button id="export_pdf_btn" onclick="exportPDF()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); border: none; color: white; padding: 10px 22px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,69,58,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(255,69,58,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,69,58,0.3)'">
+                <i class="fa fa-download"></i> PDF
+            </button>
+            <div id="export_status" style="width: 100%; text-align: center; font-size: 0.85rem; color: #86868b; display: none;"></div>
+        </div>
+
         <div class="table-responsive">
             <table>
                 <thead>
@@ -260,6 +280,75 @@
             });
         } catch (error) {
             console.error("Filter failed fetching data:", error);
+        }
+    }
+</script>
+
+<script>
+    // ── Report Export Logic ──
+    (function() {
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        const fmt = d => d.toISOString().split('T')[0];
+        document.getElementById('export_start').value = fmt(weekAgo);
+        document.getElementById('export_end').value = fmt(today);
+    })();
+
+    async function exportPDF() {
+        const startVal = document.getElementById('export_start').value;
+        const endVal = document.getElementById('export_end').value;
+        const statusEl = document.getElementById('export_status');
+        const btn = document.getElementById('export_pdf_btn');
+
+        if (!startVal || !endVal) {
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#ff453a';
+            statusEl.innerHTML = '<i class="fa fa-exclamation-triangle"></i> Please select both start and end dates.';
+            return;
+        }
+
+        if (new Date(startVal) > new Date(endVal)) {
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#ff453a';
+            statusEl.innerHTML = '<i class="fa fa-exclamation-triangle"></i> Start date must be before end date.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Generating...';
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#64d2ff';
+        statusEl.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Querying database and building PDF...';
+
+        try {
+            const response = await fetch(`/api/export/pdf?start=${startVal}&end=${endVal}`);
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Export failed');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `IoT_Report_${startVal}_to_${endVal}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            statusEl.style.color = '#32d74b';
+            statusEl.innerHTML = '<i class="fa fa-check-circle"></i> Report downloaded successfully!';
+            setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+
+        } catch (error) {
+            statusEl.style.color = '#ff453a';
+            statusEl.innerHTML = `<i class="fa fa-times-circle"></i> ${error.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-download"></i> Download PDF';
         }
     }
 </script>
