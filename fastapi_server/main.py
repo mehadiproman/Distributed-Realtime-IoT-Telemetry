@@ -1,10 +1,19 @@
 import asyncio
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+import os
+import sys
+import time
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request, Query
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import socketio
 import aiomqtt
+import httpx
 
 # Updated import (important if using structured project)
 from fastapi_server.database import (
@@ -12,6 +21,9 @@ from fastapi_server.database import (
     get_sensor_data_within_range, create_sensor_data, delete_sensor_data,
     create_soil_data, get_all_soil_data, log_pump_event
 )
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
@@ -21,10 +33,20 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 templates = Jinja2Templates(directory="fastapi_server/templates")
 
 # Configuration
-MQTT_BROKER = "127.0.0.1"
+MQTT_BROKER = "test.mosquitto.org"
 MQTT_PORT = 1883
 
 sensor_buffer = []
+
+# -------------------- WEATHER CONFIG --------------------
+
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "4e277f5f6b9755912b2ee93a3ae50ac6")
+WEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+DEFAULT_CITY = "Dhaka"
+
+# Simple in-memory cache: { city: { "data": {...}, "timestamp": float } }
+_weather_cache: dict = {}
+CACHE_TTL_SECONDS = 600  # 10 minutes
 
 # -------------------- MODELS --------------------
 
@@ -84,14 +106,14 @@ async def mqtt_loop():
                             print(f"Received: {payload}")
                             try:
                                 vals = payload.split(',')
-                                if len(vals) < 4:
+                                if len(vals) < 1:
                                     raise ValueError("Invalid payload format")
 
                                 sensor_data = {
-                                    "temperature": float(vals[0]),
-                                    "pressure": float(vals[1]),
-                                    "airQuality": float(vals[2]),
-                                    "lightIntensity": float(vals[3])
+                                    "temperature": float(vals[0]) if len(vals) > 0 else 0.0,
+                                    "pressure": float(vals[1]) if len(vals) > 1 else 0.0,
+                                    "airQuality": float(vals[2]) if len(vals) > 2 else 0.0,
+                                    "lightIntensity": float(vals[3]) if len(vals) > 3 else 0.0
                                 }
 
                                 await sio.emit("sensorData", sensor_data)
@@ -165,6 +187,78 @@ async def api_get_sensor_by_id(item_id: int):
 @app.delete("/api/sensor/{item_id}")
 async def api_delete_sensor(item_id: int):
     return await delete_sensor_data(item_id)
+
+@app.get("/weather")
+async def get_weather(city: str = Query(default=None)):
+    """Fetch current weather from OpenWeatherMap with 10-min caching."""
+    target_city = city or DEFAULT_CITY
+    cache_key = target_city.lower().strip()
+
+    # Check in-memory cache
+    cached = _weather_cache.get(cache_key)
+    if cached and (time.time() - cached["timestamp"] < CACHE_TTL_SECONDS):
+        return cached["data"]
+
+    # Validate API key exists
+    if not WEATHER_API_KEY or WEATHER_API_KEY == "your_openweathermap_api_key_here":
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Weather API key not configured. Set WEATHER_API_KEY in .env"}
+        )
+
+    try:
+        # Call OpenWeatherMap API using async httpx client
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                WEATHER_BASE_URL,
+                params={
+                    "q": target_city,
+                    "appid": WEATHER_API_KEY,
+                    "units": "metric"
+                }
+            )
+
+        # If upstream API returns non-200, relay a clean error
+        if response.status_code != 200:
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Weather API error"}
+            )
+
+        raw = response.json()
+
+        # Build a clean, frontend-friendly response
+        weather_data = {
+            "city": raw.get("name", target_city),
+            "temperature": raw["main"]["temp"],
+            "feels_like": raw["main"]["feels_like"],
+            "humidity": raw["main"]["humidity"],
+            "pressure": raw["main"]["pressure"],
+            "weather": raw["weather"][0]["main"],
+            "description": raw["weather"][0]["description"],
+            "wind_speed": raw["wind"]["speed"]
+        }
+
+        # Store in cache
+        _weather_cache[cache_key] = {
+            "data": weather_data,
+            "timestamp": time.time()
+        }
+
+        return weather_data
+
+    except httpx.TimeoutException:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Weather API timeout"}
+        )
+    except Exception as e:
+        # Log but don't crash the server
+        print(f"Weather fetch error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Weather API error"}
+        )
 
 # -------------------- SOCKET EVENTS --------------------
 

@@ -172,7 +172,7 @@
                     <tr>
                         <th>Timestamp (Server)</th>
                         <th>Temperature (°C)</th>
-                        <th>Pressure (hPa)</th>
+                        <th>Humidity (%)</th>
                         <th>Air Quality (AQI)</th>
                         <th>Light Config</th>
                     </tr>
@@ -181,10 +181,10 @@
                     {% for item in data %}
                     <tr>
                         <td style="color: #64d2ff;">{{ item.timestamp.strftime('%b %d, %Y - %I:%M %p') if item.timestamp else 'N/A' }}</td>
-                        <td>{{ item.temperature }}</td>
-                        <td>{{ item.pressure }}</td>
-                        <td>{{ item.air_quality }}</td>
-                        <td>{{ item.light_intensity }}</td>
+                        <td>{{ "%.2f"|format(item.temperature|float) }}</td>
+                        <td>{{ "%.2f"|format(item.pressure|float) }}</td>
+                        <td>{{ "%.2f"|format(item.air_quality|float) }}</td>
+                        <td>{{ "%.2f"|format(item.light_intensity|float) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -239,16 +239,16 @@
                 tdTime.textContent = formatDate(item.timestamp);
                 
                 const tdTemp = document.createElement('td');
-                tdTemp.textContent = item.temperature;
+                tdTemp.textContent = parseFloat(item.temperature || 0).toFixed(2);
                 
                 const tdPres = document.createElement('td');
-                tdPres.textContent = item.pressure;
+                tdPres.textContent = parseFloat(item.pressure || 0).toFixed(2);
                 
                 const tdAir = document.createElement('td');
-                tdAir.textContent = item.air_quality || item.airQuality || '0';
+                tdAir.textContent = parseFloat(item.air_quality || item.airQuality || 0).toFixed(2);
                 
                 const tdLight = document.createElement('td');
-                tdLight.textContent = item.light_intensity || item.lightIntensity || '0';
+                tdLight.textContent = parseFloat(item.light_intensity || item.lightIntensity || 0).toFixed(2);
                 
                 tr.appendChild(tdTime);
                 tr.appendChild(tdTemp);

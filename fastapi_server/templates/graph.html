@@ -7,7 +7,7 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root {
             --bg-color: #0d0d12;
@@ -283,6 +283,149 @@
         .js-plotly-plot .plotly .main-svg {
             background-color: transparent !important;
         }
+        /* Weather Bar */
+        .weather-bar {
+            background: rgba(10, 132, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(10, 132, 255, 0.2);
+            border-radius: 20px;
+            padding: 16px 30px;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+            box-shadow: 0 10px 30px rgba(10, 132, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .weather-bar::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(135deg, #0a84ff 0%, #64d2ff 100%);
+            opacity: 0.8;
+        }
+        
+        .weather-content {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .weather-icon {
+            font-size: 2.5rem;
+            color: #64d2ff;
+            animation: float-weather 3s ease-in-out infinite;
+            text-shadow: 0 0 15px rgba(100, 210, 255, 0.5);
+        }
+
+        @keyframes float-weather {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .weather-temp-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .weather-temp {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #f5f5f7;
+            line-height: 1.1;
+        }
+
+        .weather-feels {
+            font-size: 0.85rem;
+            color: #86868b;
+        }
+
+        .weather-divider {
+            width: 1px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .weather-details {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .w-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .w-label {
+            font-size: 0.8rem;
+            color: #86868b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .w-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f5f5f7;
+            text-transform: capitalize;
+        }
+
+        .weather-location {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f5f5f7;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .weather-loading, .weather-error {
+            color: #86868b;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .weather-error {
+            color: #ff453a;
+        }
+
+        @media (max-width: 900px) {
+            .weather-content {
+                flex-direction: column;
+                padding: 10px 0;
+            }
+            .weather-divider {
+                width: 100%;
+                height: 1px;
+            }
+            .weather-details {
+                gap: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -297,13 +440,54 @@
 </header>
 
 <div class="container">
+    <!-- Weather Summary Bar -->
+    <div class="weather-bar" id="weatherBar">
+        <div class="weather-loading" id="weatherLoading">
+            <i class="fa fa-circle-o-notch fa-spin"></i> Loading weather...
+        </div>
+        <div class="weather-error" id="weatherError" style="display: none;">
+            <i class="fa fa-exclamation-triangle"></i> Failed to load weather data
+        </div>
+        <div class="weather-content" id="weatherContent" style="display: none;">
+            <div class="weather-main">
+                <span class="weather-icon" id="w_icon"><i class="fa fa-cloud"></i></span>
+                <div class="weather-temp-group">
+                    <span class="weather-temp"><span id="w_temp">--</span>°C</span>
+                    <span class="weather-feels">Feels like <span id="w_feels">--</span>°C</span>
+                </div>
+            </div>
+            <div class="weather-divider"></div>
+            <div class="weather-details">
+                <div class="w-item">
+                    <span class="w-label">Condition</span>
+                    <span class="w-value" id="w_cond">--</span>
+                </div>
+                <div class="w-item">
+                    <span class="w-label">Humidity</span>
+                    <span class="w-value"><span id="w_hum">--</span>%</span>
+                </div>
+                <div class="w-item">
+                    <span class="w-label">Wind</span>
+                    <span class="w-value"><span id="w_wind">--</span> km/h</span>
+                </div>
+                <div class="w-item">
+                    <span class="w-label">Pressure</span>
+                    <span class="w-value"><span id="w_pres">--</span> hPa</span>
+                </div>
+            </div>
+            <div class="weather-divider" id="w_div_2"></div>
+            <div class="weather-location">
+                <i class="fa fa-map-marker" style="color: #64d2ff;"></i> <span id="w_city">--</span>
+            </div>
+        </div>
+    </div>
     <div class="cards-grid">
         <!-- Temperature Card -->
         <div class="glass-card" id="temp_card">
             <div class="card-header">
                 <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-thermometer-half"></i> Temperature</h4></a>
                 <label class="switch">
-                    <input id="temp_check" type="checkbox" class="sensor-checkbox" data-sensor="temperature">
+                    <input id="temp_check" type="checkbox" class="sensor-checkbox" data-sensor="temperature" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
@@ -311,16 +495,16 @@
             <div id="temp_status" class="card-status status-normal">Waiting...</div>
         </div>
 
-        <!-- Pressure Card -->
+        <!-- Humidity Card -->
         <div class="glass-card" id="pres_card">
             <div class="card-header">
-                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-tachometer"></i> Pressure</h4></a>
+                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-tint"></i> Humidity</h4></a>
                 <label class="switch">
-                    <input id="pres_check" type="checkbox" class="sensor-checkbox" data-sensor="pressure">
+                    <input id="pres_check" type="checkbox" class="sensor-checkbox" data-sensor="pressure" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
-            <div class="card-value"><span id="pres_raw">--</span> <span class="card-unit">hPa</span></div>
+            <div class="card-value"><span id="pres_raw">--</span> <span class="card-unit">%</span></div>
             <div id="pres_status" class="card-status status-normal">Waiting...</div>
         </div>
 
@@ -329,7 +513,7 @@
             <div class="card-header">
                 <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-leaf"></i> Air Quality</h4></a>
                 <label class="switch">
-                    <input id="air_check" type="checkbox" class="sensor-checkbox" data-sensor="air">
+                    <input id="air_check" type="checkbox" class="sensor-checkbox" data-sensor="air" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
@@ -342,7 +526,7 @@
             <div class="card-header">
                 <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-lightbulb-o"></i> Light Intensity</h4></a>
                 <label class="switch">
-                    <input id="light_check" type="checkbox" class="sensor-checkbox" data-sensor="light">
+                    <input id="light_check" type="checkbox" class="sensor-checkbox" data-sensor="light" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
@@ -563,8 +747,8 @@
     Plotly.newPlot('tempGraph', [{ x: times, y: temperature, mode: 'lines', name: 'Temp', line: {color: purpleColor, shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(166,68,255,0.1)'}], 
         {...darkLayout, title: {text: 'Temperature Trend', font: {color: '#f5f5f7', size: 16}}}
     );
-    Plotly.newPlot('pressureGraph', [{ x: times, y: pressure, mode: 'lines', name: 'Pres', line: {color: '#64d2ff', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(100,210,255,0.1)'}], 
-        {...darkLayout, title: {text: 'Pressure Trend', font: {color: '#f5f5f7', size: 16}}}
+    Plotly.newPlot('pressureGraph', [{ x: times, y: pressure, mode: 'lines', name: 'Hum', line: {color: '#64d2ff', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(100,210,255,0.1)'}], 
+        {...darkLayout, title: {text: 'Humidity Trend', font: {color: '#f5f5f7', size: 16}}}
     );
     Plotly.newPlot('airQualityGraph', [{ x: times, y: airQuality, mode: 'lines', name: 'AQI', line: {color: '#32d74b', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(50,215,75,0.1)'}], 
         {...darkLayout, title: {text: 'Air Quality Trend', font: {color: '#f5f5f7', size: 16}}}
@@ -577,30 +761,30 @@
         type: "indicator",
         mode: "gauge+number",
         value: 0,
-        title: { text: "Current Temperature (°C)", font: {color: '#f5f5f7', size: 18} },
+        title: { text: "Current Temperature", font: {color: '#f5f5f7', size: 20} },
+        number: { suffix: " °C", font: {color: '#f5f5f7', size: 40} },
         gauge: {
-            axis: { range: [0, 50], tickwidth: 1, tickcolor: "rgba(255,255,255,0.5)" },
-            bar: { color: purpleColor },
+            axis: { range: [0, 50], tickwidth: 2, tickcolor: "rgba(255,255,255,0.5)", tickfont: {size: 14} },
+            bar: { color: purpleColor, thickness: 0.25 },
             bgcolor: "rgba(255,255,255,0.05)",
-            borderwidth: 0,
-            bordercolor: "transparent",
+            borderwidth: 2,
+            bordercolor: "rgba(255,255,255,0.1)",
             steps: [
                 { range: [0, 15], color: "rgba(100,210,255,0.15)" },
                 { range: [15, 25], color: "rgba(50,215,75,0.15)" },
                 { range: [25, 35], color: "rgba(255,214,10,0.15)" },
                 { range: [35, 50], color: "rgba(255,69,58,0.15)" }
-            ],
-            threshold: { line: { color: "#ff453a", width: 4 }, thickness: 0.75, value: 45 }
+            ]
         }
-    }], {...darkLayout, margin: { t: 70, b: 30, l: 50, r: 50 }});
+    }], {...darkLayout, margin: { t: 80, b: 40, l: 60, r: 60 }});
 
     function updatePlot(data) {
         let currentTime = new Date();
         times.push(currentTime);
-        temperature.push(parseFloat(data.temperature));
-        pressure.push(parseFloat(data.pressure));
-        airQuality.push(parseFloat(data.airQuality));
-        lightIntensity.push(parseFloat(data.lightIntensity));
+        temperature.push(document.getElementById('temp_check').checked ? parseFloat(data.temperature) : null);
+        pressure.push(document.getElementById('pres_check').checked ? parseFloat(data.pressure) : null);
+        airQuality.push(document.getElementById('air_check').checked ? parseFloat(data.airQuality) : null);
+        lightIntensity.push(document.getElementById('light_check').checked ? parseFloat(data.lightIntensity) : null);
 
         if (times.length > 20) {
             times.shift();
@@ -630,11 +814,10 @@
     }
 
     function getPresStatus(val) {
-        if(val < 980) return {text: "Low Pressure", class: "status-low"};
-        if(val <= 1000) return {text: "Slightly Low", class: "status-warning"};
-        if(val <= 1025) return {text: "Normal", class: "status-normal"};
-        if(val <= 1040) return {text: "High", class: "status-warning"};
-        return {text: "Very High", class: "status-danger"};
+        if(val < 30) return {text: "Dry", class: "status-warning"};
+        if(val <= 60) return {text: "Comfortable", class: "status-normal"};
+        if(val <= 80) return {text: "Humid", class: "status-warning"};
+        return {text: "Very Humid", class: "status-danger"};
     }
 
     function getAirStatus(val) {
@@ -666,15 +849,25 @@
         let a = parseFloat(data.airQuality);
         let l = parseFloat(data.lightIntensity);
 
-        document.getElementById('temp_raw').innerText = t.toFixed(2);
-        document.getElementById('pres_raw').innerText = p.toFixed(2);
-        document.getElementById('air_raw').innerText = a.toFixed(2);
-        document.getElementById('light_raw').innerText = l.toFixed(2);
+        if (document.getElementById('temp_check').checked) {
+            document.getElementById('temp_raw').innerText = t.toFixed(2);
+            applyStatus('temp_status', getTempStatus(t));
+        }
 
-        applyStatus('temp_status', getTempStatus(t));
-        applyStatus('pres_status', getPresStatus(p));
-        applyStatus('air_status', getAirStatus(a));
-        applyStatus('light_status', getLightStatus(l));
+        if (document.getElementById('pres_check').checked) {
+            document.getElementById('pres_raw').innerText = p.toFixed(2);
+            applyStatus('pres_status', getPresStatus(p));
+        }
+
+        if (document.getElementById('air_check').checked) {
+            document.getElementById('air_raw').innerText = a.toFixed(2);
+            applyStatus('air_status', getAirStatus(a));
+        }
+
+        if (document.getElementById('light_check').checked) {
+            document.getElementById('light_raw').innerText = l.toFixed(2);
+            applyStatus('light_status', getLightStatus(l));
+        }
     }
 
     socket.on('sensorData', (data) => {
@@ -714,6 +907,72 @@
             socket.emit('checkBoxData', `${sensorName},${sensorState}`);
         });
     });
+
+    // Weather Data Fetching
+    async function fetchWeather() {
+        const loading = document.getElementById('weatherLoading');
+        const errorEl = document.getElementById('weatherError');
+        const content = document.getElementById('weatherContent');
+        
+        loading.style.display = 'flex';
+        errorEl.style.display = 'none';
+        content.style.display = 'none';
+        
+        try {
+            const response = await fetch('/weather');
+            
+            // Handle non-OK responses from our backend
+            if (!response.ok) {
+                let errMsg = "Failed to load weather data";
+                try {
+                    const errData = await response.json();
+                    if (errData.detail) errMsg = errData.detail;
+                } catch (_) {}
+                throw new Error(errMsg);
+            }
+            
+            const data = await response.json();
+            
+            // Populate UI values
+            document.getElementById('w_temp').innerText = Math.round(data.temperature);
+            document.getElementById('w_feels').innerText = Math.round(data.feels_like);
+            document.getElementById('w_hum').innerText = data.humidity;
+            document.getElementById('w_wind').innerText = data.wind_speed;
+            document.getElementById('w_pres').innerText = data.pressure;
+            document.getElementById('w_city').innerText = data.city;
+
+            // Condition text + description tooltip
+            const condEl = document.getElementById('w_cond');
+            condEl.innerText = data.weather;
+            condEl.title = data.description || '';
+            
+            // Dynamic weather icon
+            let iconClass = 'fa-cloud';
+            let condition = (data.weather || '').toLowerCase();
+            if (condition.includes('clear') || condition.includes('sun')) iconClass = 'fa-sun-o';
+            else if (condition.includes('rain') || condition.includes('drizzle')) iconClass = 'fa-tint';
+            else if (condition.includes('cloud')) iconClass = 'fa-cloud';
+            else if (condition.includes('snow')) iconClass = 'fa-snowflake-o';
+            else if (condition.includes('storm') || condition.includes('thunder')) iconClass = 'fa-bolt';
+            else if (condition.includes('mist') || condition.includes('haze') || condition.includes('fog')) iconClass = 'fa-low-vision';
+            
+            document.getElementById('w_icon').innerHTML = `<i class="fa ${iconClass}"></i>`;
+            
+            loading.style.display = 'none';
+            content.style.display = 'flex';
+            
+        } catch (error) {
+            console.error("Weather fetch error:", error);
+            loading.style.display = 'none';
+            errorEl.innerHTML = `<i class="fa fa-exclamation-triangle"></i> ${error.message}`;
+            errorEl.style.display = 'flex';
+        }
+    }
+
+    // Fetch on page load
+    fetchWeather();
+    // Auto-refresh every 5 minutes (matches cache TTL)
+    setInterval(fetchWeather, 300000);
 </script>
 </body>
 </html>
