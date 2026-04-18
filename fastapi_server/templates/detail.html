@@ -23,9 +23,15 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             background-image: radial-gradient(circle at 50% 15%, rgba(107, 0, 255, 0.15), transparent 40%);
             background-attachment: fixed;
             -webkit-font-smoothing: antialiased;
+        }
+
+        .main-content {
+            flex: 1;
         }
 
         header {
@@ -134,9 +140,42 @@
             .back-btn { position: relative; left: auto; margin-bottom: 20px; }
             .glass-panel { padding: 20px; }
         }
+        .slider.round:before { border-radius: 50%; }
+
+        /* General UI Tweaks */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.1);
+            transition: .4s;
+            border: 1px solid var(--glass-border);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+        }
+        input:checked + .slider { background-color: var(--accent-purple); border-color: var(--accent-purple); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .slider.round { border-radius: 34px; }
+        .slider.round:before { border-radius: 50%; }
     </style>
 </head>
 <body>
+<div class="main-content">
 
     
 <header>
@@ -145,6 +184,132 @@
 </header>
 
 <div class="container">
+    <!-- Smart Data Retention Manager Section -->
+    <div class="glass-panel" style="margin-bottom: 30px; border-color: rgba(166, 68, 255, 0.2); background: linear-gradient(135deg, rgba(20, 20, 35, 0.4) 0%, rgba(13, 13, 18, 0.6) 100%);">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(166, 68, 255, 0.1); border: 1px solid rgba(166, 68, 255, 0.2); display: flex; align-items: center; justify-content: center;">
+                <i class="fa fa-hdd-o" style="color: #a644ff; font-size: 1.4rem;"></i>
+            </div>
+            <div>
+                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">Smart Data Retention Manager</h2>
+                <p style="margin: 5px 0 0 0; color: #86868b; font-size: 0.85rem;">Optimize database storage and system performance</p>
+            </div>
+            <button onclick="fetchHistoryStats()" style="margin-left: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #86868b; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; transition: 0.3s;" title="Refresh Stats">
+                <i class="fa fa-refresh"></i>
+            </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <!-- Stats Cards -->
+            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">Telemetry Records</div>
+                <div id="stat_total_rows" style="font-size: 1.5rem; font-weight: 700; color: #f5f5f7;">--</div>
+                <div style="font-size: 0.8rem; color: #86868b; margin-top: 5px;">Total rows stored</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">Storage Usage</div>
+                <div id="stat_storage_mb" style="font-size: 1.5rem; font-weight: 700; color: #64d2ff;">-- MB</div>
+                <div style="font-size: 0.8rem; color: #86868b; margin-top: 5px;">Estimated disk space</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">Data Age Range</div>
+                <div id="stat_data_range" style="font-size: 0.95rem; font-weight: 600; color: #f5f5f7; line-height: 1.4;">--<br>to --</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">Daily Ingestion</div>
+                <div id="stat_avg_day" style="font-size: 1.5rem; font-weight: 700; color: #32d74b;">--</div>
+                <div style="font-size: 0.8rem; color: #86868b; margin-top: 5px;">Average rows / day</div>
+            </div>
+        </div>
+
+        <!-- Retention Controls -->
+        <div style="background: rgba(166, 68, 255, 0.03); padding: 25px; border-radius: 20px; border: 1px solid rgba(166, 68, 255, 0.1); display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Select Retention Policy</label>
+                <select id="retention_days" style="width: 100%; background: #000; border: 1px solid var(--glass-border); color: #fff; padding: 12px; border-radius: 12px; outline: none; cursor: pointer;">
+                    <option value="7">Keep last 7 Days (Strict)</option>
+                    <option value="30" selected>Keep last 30 Days (Recommended)</option>
+                    <option value="90">Keep last 90 Days</option>
+                    <option value="365">Keep last Year</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px; margin-bottom: 5px;">
+                <label class="switch">
+                    <input type="checkbox" id="auto_cleanup_toggle" onchange="saveRetentionSettings()">
+                    <span class="slider round"></span>
+                </label>
+                <div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #f5f5f7;">Auto-Cleanup Daily</div>
+                    <div style="font-size: 0.7rem; color: #86868b;">Run policy automatically</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="previewCleanup()" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease;">
+                    Preview Cleanup
+                </button>
+                <button onclick="showCleanupModal()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s ease; box-shadow: 0 4px 15px rgba(255,69,58,0.2);">
+                    Delete Old Records
+                </button>
+            </div>
+        </div>
+        <div id="cleanup_preview_area" style="margin-top: 20px; padding: 15px; border-radius: 12px; background: rgba(100, 210, 255, 0.05); border: 1px solid rgba(100, 210, 255, 0.1); display: none;">
+            <p id="preview_text" style="margin:0; font-size: 0.9rem; color: #64d2ff;"></p>
+        </div>
+    </div>
+
+    <!-- Cleanup Confirmation Modal -->
+    <div id="cleanup_modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="glass-panel" style="max-width: 450px; border-color: #ff453a; text-align: center;">
+            <i class="fa fa-exclamation-triangle" style="font-size: 3rem; color: #ff453a; margin-bottom: 20px;"></i>
+            <h2 style="margin: 0 0 15px 0; color: #f5f5f7;">Confirm Deletion</h2>
+            <p style="color: #86868b; line-height: 1.6; margin-bottom: 25px;">
+                Are you sure you want to delete telemetry data older than <span id="confirm_days_text" style="color:#ff453a; font-weight:bold;">30</span> days?
+                <br><br>
+                <strong style="color: #f5f5f7;">This action cannot be undone.</strong>
+            </p>
+            
+            <label style="display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 30px; cursor: pointer;">
+                <input type="checkbox" id="understand_checkbox" style="width: 18px; height: 18px;">
+                <span style="font-size: 0.9rem; color: #86868b;">I understand the risk</span>
+            </label>
+
+            <div style="display: flex; gap: 15px;">
+                <button onclick="closeCleanupModal()" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+                <button id="final_delete_btn" onclick="executeCleanup()" disabled style="flex: 2; background: #ff453a; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: not-allowed; opacity: 0.5;">Confirm & Wipe Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Report Section (Dedicated Module) -->
+    <div class="glass-panel" style="margin-bottom: 30px; border-color: rgba(255, 69, 58, 0.2); transition: all 0.3s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 69, 58, 0.1); border: 1px solid rgba(255, 69, 58, 0.2); display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-file-pdf-o" style="color: #ff453a; font-size: 1.4rem;"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.4rem; font-weight: 700;">Export Telemetry Report</h2>
+                    <p style="margin: 5px 0 0 0; color: #86868b; font-size: 0.85rem;">Generate professional PDF reports from selected date ranges</p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; padding: 12px 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">From</label>
+                    <input type="date" id="export_start" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; min-width: 150px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='#ff453a'" onblur="this.style.borderColor='var(--glass-border)'">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">To</label>
+                    <input type="date" id="export_end" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; min-width: 150px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='#ff453a'" onblur="this.style.borderColor='var(--glass-border)'">
+                </div>
+                <button id="export_pdf_btn" onclick="exportPDF()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); border: none; color: white; padding: 10px 22px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,69,58,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(255,69,58,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,69,58,0.3)'">
+                    <i class="fa fa-download"></i> PDF
+                </button>
+            </div>
+        </div>
+        <div id="export_status" style="width: 100%; text-align: right; font-size: 0.85rem; color: #86868b; display: none; margin-top: 10px; padding-right: 15px;"></div>
+    </div>
+
     <div class="glass-panel">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
             <h2 style="margin:0; font-weight: 600;">Historical Telemetry Records</h2>
@@ -153,9 +318,10 @@
                 <select id="time_filter" style="background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--glass-border); padding: 12px 16px; border-radius: 12px; font-family: inherit; font-size: 0.95rem; cursor: pointer; outline: none;">
                     <option value="1">Past 1 Hour</option>
                     <option value="6">Past 6 Hours</option>
-                    <option value="24" selected>Past 24 Hours</option>
+                    <option value="24">Past 24 Hours</option>
                     <option value="168">Past 7 Days</option>
                     <option value="720">Past 30 Days</option>
+                    <option value="87600" selected>All Records</option>
                 </select>
                 <button onclick="executeSearch()" style="background: var(--purple-gradient); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease; display:flex; align-items:center; gap:8px;">
                     <i class="fa fa-filter"></i> Apply Filter
@@ -166,25 +332,6 @@
             </div>
         </div>
         
-        <!-- Report Export Section -->
-        <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; padding: 20px 24px; margin-bottom: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 16px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-right: auto;">
-                <i class="fa fa-file-pdf-o" style="color: #ff453a; font-size: 1.3rem;"></i>
-                <span style="font-weight: 600; color: #f5f5f7; font-size: 1rem;">Export Report</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">From</label>
-                <input type="date" id="export_start" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; min-width: 150px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">To</label>
-                <input type="date" id="export_end" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; min-width: 150px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
-            </div>
-            <button id="export_pdf_btn" onclick="exportPDF()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); border: none; color: white; padding: 10px 22px; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,69,58,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(255,69,58,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,69,58,0.3)'">
-                <i class="fa fa-download"></i> PDF
-            </button>
-            <div id="export_status" style="width: 100%; text-align: center; font-size: 0.85rem; color: #86868b; display: none;"></div>
-        </div>
 
         <div class="table-responsive">
             <table>
@@ -211,16 +358,27 @@
             </table>
             <div id="no_data_msg" style="text-align:center; padding: 40px; color: #86868b; display: {% if not data %}block{% else %}none{% endif %};">No sensor records available yet.</div>
         </div>
+
+        <div id="load_more_container" style="display: flex; justify-content: center; margin-top: 40px;">
+            <button id="load_more_btn" onclick="loadMoreData()" style="background: rgba(166, 68, 255, 0.1); color: var(--accent-purple); border: 1px solid rgba(166, 68, 255, 0.3); padding: 14px 40px; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.3s ease; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
+                <i class="fa fa-history"></i> Load Older Records
+            </button>
+        </div>
     </div>
 </div>
+</div> <!-- End main-content -->
 
-<footer style="text-align: center; padding: 40px 20px; margin-top: 40px; color: #86868b; font-size: 0.95rem; font-weight: 400; border-top: 1px solid var(--glass-border);">
+<footer style="text-align: center; padding: 60px 20px; color: #86868b; font-size: 0.92rem; font-weight: 400; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);">
+    <div style="margin-bottom: 10px; opacity: 0.5;">IOT SMART TELEMETRY SYSTEM v2.0</div>
     Made with 🤍 by Proman.
 </footer>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
+    let currentLimit = 20;
+    let currentOffset = 20;
+    let isReachingEnd = false;
     
     function formatDate(isoString) {
         if(!isoString) return 'N/A';
@@ -231,14 +389,23 @@
 
     async function executeSearch() {
         const hrs = parseInt(document.getElementById('time_filter').value);
+        console.log("Searching with hrs:", hrs);
+        currentOffset = 0;
+        isReachingEnd = false;
+        
+        const btn = document.querySelector('button[onclick="executeSearch()"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Filtering...';
         
         try {
             const response = await fetch('/api/sensor/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ timeStart: 0, timeEnd: hrs })
+                body: JSON.stringify({ timeStart: 0, timeEnd: hrs, limit: currentLimit, offset: 0 })
             });
             const db = await response.json();
+            console.log("Search result count:", db.length);
             
             const tbody = document.getElementById("tableBody");
             const noDataMsg = document.getElementById("no_data_msg");
@@ -246,41 +413,111 @@
             
             if (!db || db.length === 0) {
                 noDataMsg.style.display = 'block';
+                document.getElementById('load_more_container').style.display = 'none';
                 return;
             }
             
             noDataMsg.style.display = 'none';
+            document.getElementById('load_more_container').style.display = 'flex';
+            document.getElementById('load_more_btn').disabled = false;
+            document.getElementById('load_more_btn').style.background = 'rgba(166, 68, 255, 0.1)';
+            document.getElementById('load_more_btn').style.color = 'var(--accent-purple)';
+            document.getElementById('load_more_btn').style.cursor = 'pointer';
+            document.getElementById('load_more_btn').innerHTML = '<i class="fa fa-history"></i> Load Older Records';
             
-            db.forEach(item => {
-                const tr = document.createElement('tr');
-                
-                const tdTime = document.createElement('td');
-                tdTime.style.color = '#64d2ff';
-                tdTime.textContent = formatDate(item.timestamp);
-                
-                const tdTemp = document.createElement('td');
-                tdTemp.textContent = parseFloat(item.temperature || 0).toFixed(2);
-                
-                const tdPres = document.createElement('td');
-                tdPres.textContent = parseFloat(item.pressure || 0).toFixed(2);
-                
-                const tdAir = document.createElement('td');
-                tdAir.textContent = parseFloat(item.air_quality || item.airQuality || 0).toFixed(2);
-                
-                const tdLight = document.createElement('td');
-                tdLight.textContent = parseFloat(item.light_intensity || item.lightIntensity || 0).toFixed(2);
-                
-                tr.appendChild(tdTime);
-                tr.appendChild(tdTemp);
-                tr.appendChild(tdPres);
-                tr.appendChild(tdAir);
-                tr.appendChild(tdLight);
-                
-                tbody.appendChild(tr);
-            });
+            appendRecordsToTable(db);
+            currentOffset = db.length;
+            
+            if (db.length < currentLimit) {
+                isReachingEnd = true;
+                markNoMoreData();
+            }
         } catch (error) {
             console.error("Filter failed fetching data:", error);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         }
+    }
+
+    async function loadMoreData() {
+        if (isReachingEnd) return;
+        
+        const hrs = parseInt(document.getElementById('time_filter').value);
+        const btn = document.getElementById('load_more_btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Loading...';
+        
+        try {
+            const response = await fetch('/api/sensor/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ timeStart: 0, timeEnd: hrs, limit: currentLimit, offset: currentOffset })
+            });
+            const db = await response.json();
+            
+            if (!db || db.length === 0) {
+                isReachingEnd = true;
+                markNoMoreData();
+                return;
+            }
+            
+            appendRecordsToTable(db);
+            currentOffset += db.length;
+            
+            if (db.length < currentLimit) {
+                isReachingEnd = true;
+                markNoMoreData();
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-history"></i> Load Older Records';
+            }
+        } catch (error) {
+            console.error("Load more failed:", error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-history"></i> Try Again';
+        }
+    }
+
+    function appendRecordsToTable(db) {
+        const tbody = document.getElementById("tableBody");
+        db.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            const tdTime = document.createElement('td');
+            tdTime.style.color = '#64d2ff';
+            tdTime.textContent = formatDate(item.timestamp);
+            
+            const tdTemp = document.createElement('td');
+            tdTemp.textContent = parseFloat(item.temperature || 0).toFixed(2);
+            
+            const tdPres = document.createElement('td');
+            tdPres.textContent = parseFloat(item.pressure || 0).toFixed(2);
+            
+            const tdAir = document.createElement('td');
+            tdAir.textContent = parseFloat(item.air_quality || item.airQuality || 0).toFixed(2);
+            
+            const tdLight = document.createElement('td');
+            tdLight.textContent = parseFloat(item.light_intensity || item.lightIntensity || 0).toFixed(2);
+            
+            tr.appendChild(tdTime);
+            tr.appendChild(tdTemp);
+            tr.appendChild(tdPres);
+            tr.appendChild(tdAir);
+            tr.appendChild(tdLight);
+            
+            tbody.appendChild(tr);
+        });
+    }
+
+    function markNoMoreData() {
+        const btn = document.getElementById('load_more_btn');
+        btn.disabled = true;
+        btn.style.background = 'rgba(255,255,255,0.05)';
+        btn.style.color = '#86868b';
+        btn.style.borderColor = 'transparent';
+        btn.style.cursor = 'default';
+        btn.innerHTML = 'No More Historical Records';
     }
 </script>
 
@@ -351,6 +588,172 @@
             btn.innerHTML = '<i class="fa fa-download"></i> Download PDF';
         }
     }
+
+    // Smart Retention UI Logic
+    async function fetchHistoryStats() {
+        try {
+            const response = await fetch('/api/history/stats');
+            const data = await response.json();
+            
+            document.getElementById('stat_total_rows').innerText = data.total_rows.toLocaleString();
+            document.getElementById('stat_storage_mb').innerText = data.storage_mb;
+            document.getElementById('stat_avg_day').innerText = data.avg_per_day.toLocaleString();
+            
+            if (data.oldest_record && data.newest_record) {
+                const oldest = new Date(data.oldest_record).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const newest = new Date(data.newest_record).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                document.getElementById('stat_data_range').innerHTML = `${oldest}<br>to ${newest}`;
+            }
+        } catch (error) {
+            console.error("Failed to load DB stats:", error);
+        }
+    }
+
+    async function previewCleanup() {
+        const days = document.getElementById('retention_days').value;
+        const area = document.getElementById('cleanup_preview_area');
+        const text = document.getElementById('preview_text');
+        
+        area.style.display = 'block';
+        text.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Calculating impact...';
+        
+        try {
+            const response = await fetch(`/api/history/cleanup-preview?days=${days}`);
+            const data = await response.json();
+            
+            text.innerHTML = `<i class="fa fa-info-circle"></i> Policy impact: <strong>${data.total_deleted.toLocaleString()}</strong> records match this criteria. Est. storage relief: <strong>${(data.total_deleted * 0.0002).toFixed(2)} MB</strong>.`;
+        } catch (error) {
+            text.innerText = "Error calculating preview.";
+        }
+    }
+
+    function showCleanupModal() {
+        const days = document.getElementById('retention_days').value;
+        document.getElementById('confirm_days_text').innerText = days;
+        document.getElementById('cleanup_modal').style.display = 'flex';
+    }
+
+    function closeCleanupModal() {
+        document.getElementById('cleanup_modal').style.display = 'none';
+        document.getElementById('understand_checkbox').checked = false;
+        updateWipeButton();
+    }
+
+    document.getElementById('understand_checkbox').addEventListener('change', updateWipeButton);
+
+    function updateWipeButton() {
+        const checked = document.getElementById('understand_checkbox').checked;
+        const btn = document.getElementById('final_delete_btn');
+        if (checked) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    }
+
+    async function executeCleanup() {
+        const days = document.getElementById('retention_days').value;
+        const btn = document.getElementById('final_delete_btn');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Cleaning Database...';
+        
+        try {
+            const response = await fetch(`/api/history/cleanup?days=${days}`, { method: 'DELETE' });
+            const data = await response.json();
+            
+            alert(`Succesfully cleaned up ${data.total_deleted.toLocaleString()} records! System is now optimized.`);
+            closeCleanupModal();
+            fetchHistoryStats();
+            executeSearch(); // Refresh table
+        } catch (error) {
+            alert("Cleanup failed. Check logs.");
+        } finally {
+            btn.innerHTML = 'Confirm & Wipe Data';
+        }
+    }
+
+    // Auto-retention settings sync
+    async function loadRetentionSettings() {
+        try {
+            const response = await fetch('/api/history/settings');
+            const data = await response.json();
+            document.getElementById('auto_cleanup_toggle').checked = data.enabled;
+            document.getElementById('retention_days').value = data.days;
+        } catch (e) {
+            console.error("Failed to load settings:", e);
+        }
+    }
+
+    async function saveRetentionSettings() {
+        const enabled = document.getElementById('auto_cleanup_toggle').checked;
+        const days = document.getElementById('retention_days').value;
+        
+        try {
+            await fetch('/api/history/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled, days: parseInt(days) })
+            });
+            console.log("Retention settings updated.");
+        } catch (e) {
+            alert("Failed to save auto-cleanup settings.");
+        }
+    }
+
+    // Initial load State Initialization
+    fetchHistoryStats();
+    loadRetentionSettings();
+
+    // Sync initial offset with rendered rows
+    function initPagination() {
+        try {
+            const tableBody = document.getElementById('tableBody');
+            if (!tableBody) return;
+            
+            const rows = tableBody.getElementsByTagName('tr');
+            const rowCount = rows.length;
+            
+            currentOffset = rowCount;
+            console.log("Initial state count:", rowCount);
+            
+            if (rowCount < currentLimit) {
+                isReachingEnd = true;
+                markNoMoreData();
+            } else {
+                isReachingEnd = false;
+                resetLoadMoreButton();
+            }
+            
+            if (rowCount === 0) {
+                document.getElementById('no_data_msg').style.display = 'block';
+                document.getElementById('load_more_container').style.display = 'none';
+            } else {
+                document.getElementById('no_data_msg').style.display = 'none';
+                document.getElementById('load_more_container').style.display = 'flex';
+            }
+        } catch (e) {
+            console.error("Pagination init failed:", e);
+        }
+    }
+
+    function resetLoadMoreButton() {
+        const btn = document.getElementById('load_more_btn');
+        if (!btn) return;
+        btn.disabled = false;
+        btn.style.background = 'rgba(166, 68, 255, 0.1)';
+        btn.style.color = 'var(--accent-purple)';
+        btn.style.border = '1px solid rgba(166, 68, 255, 0.3)';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = '<i class="fa fa-history"></i> Load Older Records';
+    }
+
+    // Run initialization immediately since script is at end of body
+    initPagination();
 </script>
 
 </body>

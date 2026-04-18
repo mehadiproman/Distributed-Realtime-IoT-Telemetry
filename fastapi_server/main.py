@@ -3,6 +3,7 @@ import io
 import os
 import sys
 import time
+from datetime import datetime
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -23,9 +24,16 @@ from fastapi_server.database import (
     create_soil_data, get_all_soil_data, log_pump_event,
     update_device_status, mark_offline_devices, get_all_devices,
     get_pump_mode, set_pump_mode,
-    get_sensor_data_by_date_range, get_soil_data_by_date_range
+    get_sensor_data_by_date_range, get_soil_data_by_date_range,
+    get_system_metrics, bst_tz,
+    get_history_stats, get_cleanup_preview, delete_old_telemetry,
+    get_retention_settings, set_retention_settings
 )
 from fastapi_server.report_generator import generate_pdf_report
+try:
+    from fastapi_server.ml.predict import engine as ml_engine
+except ImportError:
+    ml_engine = None
 
 # Load environment variables from .env file
 load_dotenv()
@@ -64,6 +72,8 @@ class SensorDataCreate(BaseModel):
 class SearchTimeRange(BaseModel):
     timeStart: float
     timeEnd: float
+    limit: int = 20
+    offset: int = 0
 
 # -------------------- BUFFER LOGIC --------------------
 
@@ -92,12 +102,14 @@ async def save_avg_sensor_data(data: dict):
 PUMP_MODE = "AUTO"
 current_pump_state = "OFF"
 last_auto_toggle_time = 0
+mqtt_connected_status = False
 
 async def mqtt_loop():
-    global current_pump_state, last_auto_toggle_time
+    global current_pump_state, last_auto_toggle_time, mqtt_connected_status
     while True:
         try:
             async with aiomqtt.Client(hostname=MQTT_BROKER, port=MQTT_PORT) as client:
+                mqtt_connected_status = True
                 print("Connected to MQTT broker")
 
                 await client.subscribe("home/sensors/#")
@@ -126,6 +138,9 @@ async def mqtt_loop():
 
                                 await sio.emit("sensorData", sensor_data)
                                 await save_avg_sensor_data(sensor_data)
+                                
+                                # Auto-capture device from general sensor topic if heartbeat hasn't reached us yet
+                                await update_device_status("Legacy-ESP32", 100.0, 100.0, "online")
 
                             except Exception as parse_err:
                                 print(f"Payload parse error: {parse_err}")
@@ -135,6 +150,9 @@ async def mqtt_loop():
                                 moisture = float(payload)
                                 await create_soil_data(moisture)
                                 await sio.emit("soilData", {"moisture": moisture})
+                                
+                                # Auto-capture device status
+                                await update_device_status("Legacy-ESP32", 100.0, 100.0, "online")
                                 
                                 # Auto irrigation logic
                                 if PUMP_MODE == "AUTO":
@@ -166,10 +184,12 @@ async def mqtt_loop():
                                 print(f"Heartbeat parse error: {e}")
 
         except aiomqtt.MqttError as err:
+            mqtt_connected_status = False
             print(f"MQTT error: {err}. Reconnecting in 5s...")
             await asyncio.sleep(5)
 
         except Exception as e:
+            mqtt_connected_status = False
             print(f"Unhandled error: {e}. Reconnecting in 5s...")
             await asyncio.sleep(5)
 
@@ -208,6 +228,7 @@ async def startup_event():
     PUMP_MODE = await get_pump_mode()
     asyncio.create_task(mqtt_loop())
     asyncio.create_task(heartbeat_monitor())
+    asyncio.create_task(auto_cleanup_task())
 
 # -------------------- ROUTES --------------------
 
@@ -221,7 +242,8 @@ async def graph(request: Request):
 
 @app.get("/detail", response_class=HTMLResponse)
 async def detail(request: Request):
-    data = await get_all_sensor_data(limit=100)
+    # Default to 'All Records' (large range) for initial load to ensure Load More works by default
+    data = await get_sensor_data_within_range(time_end_hrs=87600, limit=20, offset=0)
     return templates.TemplateResponse("detail.html", {"request": request, "data": data})
 
 @app.get("/api/sensor")
@@ -234,7 +256,7 @@ async def api_create_sensor(data: SensorDataCreate):
 
 @app.post("/api/sensor/search")
 async def api_search_sensor(time_range: SearchTimeRange):
-    return await get_sensor_data_within_range(time_range.timeStart, time_range.timeEnd)
+    return await get_sensor_data_within_range(time_range.timeEnd, time_range.limit, time_range.offset)
 
 @app.get("/api/sensor/{item_id}")
 async def api_get_sensor_by_id(item_id: int):
@@ -348,7 +370,132 @@ async def export_pdf(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-# -------------------- SOCKET EVENTS --------------------
+# -------------------- PREDICTION ROUTES --------------------
+
+@app.get("/api/predict/summary")
+async def get_prediction_summary():
+    """Fetch recent data and generate ML predictions."""
+    if not ml_engine:
+        return JSONResponse(status_code=503, content={"detail": "Prediction motor not available"})
+    
+    # Need at least 4 recent sensor records for trend analysis (current + 3 lags)
+    sensors = await get_all_sensor_data(limit=10)
+    soil = await get_all_soil_data(limit=5)
+    
+    if len(sensors) < 5 or len(soil) < 1:
+        return JSONResponse(status_code=200, content={
+            "error": "Insufficient data for prediction",
+            "needs_more_data": True
+        })
+    
+    try:
+        # Reload models if they weren't ready at startup
+        if not ml_engine.models:
+            ml_engine.load_models()
+            
+        summary = ml_engine.get_summary(sensors, soil)
+        return summary
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.get("/api/system/status")
+async def get_system_status():
+    """Returns real-time health and connectivity metrics for the infrastructure."""
+    start_time = time.time()
+    try:
+        db_metrics = await get_system_metrics()
+        response_ms = int((time.time() - start_time) * 1000)
+        
+        # Determine last sync text
+        last_sync_text = "Never"
+        if db_metrics['last_sync']:
+            diff = datetime.now(bst_tz) - db_metrics['last_sync']
+            seconds = int(diff.total_seconds())
+            if seconds < 60: last_sync_text = f"{seconds}s ago"
+            elif seconds < 3600: last_sync_text = f"{seconds//60}m ago"
+            else: last_sync_text = f"{seconds//3600}h ago"
+
+        return {
+            "api_server": "online",
+            "response_ms": response_ms,
+            "mqtt": "connected" if mqtt_connected_status else "offline",
+            "database": "healthy",
+            "active_devices": db_metrics['active_devices'],
+            "active_device_ids": db_metrics['active_device_ids'],
+            "total_devices": db_metrics['total_devices'],
+            "offline_devices": db_metrics['offline_devices'],
+            "last_telemetry": last_sync_text,
+            "records_today": db_metrics['records_today'],
+            "timestamp": datetime.now(bst_tz).isoformat()
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e), "database": "error"})
+
+@app.get("/api/history/stats")
+async def api_history_stats():
+    """Returns detailed database statistics for the retention manager."""
+    try:
+        stats = await get_history_stats()
+        return stats
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.get("/api/history/cleanup-preview")
+async def api_cleanup_preview(days: int = Query(30, ge=1)):
+    """Previews how many records would be removed for a given retention period."""
+    try:
+        preview = await get_cleanup_preview(days)
+        return preview
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.delete("/api/history/cleanup")
+async def api_cleanup_execute(days: int = Query(30, ge=1)):
+    """Executes the cleanup process for records older than X days."""
+    try:
+        result = await delete_old_telemetry(days)
+        return result
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.get("/api/history/settings")
+async def api_get_retention_settings():
+    """Returns the current auto-cleanup configuration."""
+    try:
+        return await get_retention_settings()
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+class RetentionSettings(BaseModel):
+    enabled: bool
+    days: int
+
+@app.post("/api/history/settings")
+async def api_post_retention_settings(data: RetentionSettings):
+    """Updates the auto-cleanup configuration."""
+    try:
+        return await set_retention_settings(data.enabled, data.days)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+# -------------------- BACKGROUND TASKS --------------------
+
+async def auto_cleanup_task():
+    """Background task that runs once every 24 hours to clean up old telemetry."""
+    while True:
+        try:
+            settings = await get_retention_settings()
+            if settings["enabled"]:
+                print(f"DEBUG: Running scheduled cleanup (older than {settings['days']} days)...")
+                result = await delete_old_telemetry(settings["days"])
+                print(f"DEBUG: Auto-cleanup complete. Deleted {result['total_deleted']} records.")
+            
+            # Wait 24 hours (86400 seconds)
+            await asyncio.sleep(86400)
+        except Exception as e:
+            print(f"Auto-cleanup error: {e}")
+            await asyncio.sleep(3600)  # Retry in 1 hour on error
+
 
 @sio.on('connect')
 async def connect(sid, environ):
