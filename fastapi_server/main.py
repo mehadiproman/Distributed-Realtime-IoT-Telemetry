@@ -65,9 +65,10 @@ CACHE_TTL_SECONDS = 600  # 10 minutes
 
 class SensorDataCreate(BaseModel):
     temperature: float
+    humidity: float
     pressure: float
-    airQuality: float
-    lightIntensity: float
+    altitude: float
+    lightLevel: float
 
 class SearchTimeRange(BaseModel):
     timeStart: float
@@ -82,15 +83,15 @@ async def save_avg_sensor_data(data: dict):
     sensor_buffer.append(data)
 
     if len(sensor_buffer) >= 5:
-        avg_temp = sum(d["temperature"] for d in sensor_buffer) / len(sensor_buffer)
-        avg_pres = sum(d["pressure"] for d in sensor_buffer) / len(sensor_buffer)
-        avg_air = sum(d["airQuality"] for d in sensor_buffer) / len(sensor_buffer)
-        avg_light = sum(d["lightIntensity"] for d in sensor_buffer) / len(sensor_buffer)
+        # Use .get with 0.0 fallback to prevent 'airQuality' or other missing key errors
+        avg_temp = sum(d.get("temperature", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+        avg_pres = sum(d.get("pressure", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+        avg_light = sum(d.get("lightLevel", 0.0) for d in sensor_buffer) / len(sensor_buffer)
 
         data_obj = {
             "temperature": round(avg_temp, 2),
             "pressure": round(avg_pres, 2),
-            "airQuality": round(avg_air, 2),
+            "airQuality": 0.0, # Removed hardware sensor
             "lightIntensity": round(avg_light, 2)
         }
 
@@ -129,15 +130,26 @@ async def mqtt_loop():
                                 if len(vals) < 1:
                                     raise ValueError("Invalid payload format")
 
+                                # Exact User-Defined Mapping:
+                                # [0]Temp, [1]Hum, [2]Light, [3]Soil, [4]Pres, [5]Alt
                                 sensor_data = {
                                     "temperature": float(vals[0]) if len(vals) > 0 else 0.0,
-                                    "pressure": float(vals[1]) if len(vals) > 1 else 0.0,
-                                    "airQuality": float(vals[2]) if len(vals) > 2 else 0.0,
-                                    "lightIntensity": float(vals[3]) if len(vals) > 3 else 0.0
+                                    "humidity": float(vals[1]) if len(vals) > 1 else 0.0,
+                                    "lightLevel": float(vals[2]) if len(vals) > 2 else 0.0,
+                                    "pressure": float(vals[4]) if len(vals) > 4 else 0.0,
+                                    "altitude": float(vals[5]) if len(vals) > 5 else 0.0
                                 }
 
                                 await sio.emit("sensorData", sensor_data)
                                 await save_avg_sensor_data(sensor_data)
+
+                                # Soil Moisture at index 3
+                                if len(vals) > 3:
+                                    try:
+                                        soil_data = float(vals[3])
+                                        await sio.emit("soilData", {"moisture": soil_data})
+                                        await create_soil_data(soil_data)
+                                    except: pass
                                 
                                 # Auto-capture device from general sensor topic if heartbeat hasn't reached us yet
                                 await update_device_status("Legacy-ESP32", 100.0, 100.0, "online")

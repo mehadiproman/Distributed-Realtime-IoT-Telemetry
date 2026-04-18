@@ -43,11 +43,11 @@
 
         .hero-section {
             position: relative;
-            padding: 80px 20px 40px 20px;
+            padding: 40px 20px 30px 20px; /* Shifted UP */
             text-align: center;
             background: linear-gradient(to bottom, rgba(13, 13, 18, 0.8), rgba(13, 13, 18, 0));
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 20px;
+            margin-bottom: 10px; /* Compact */
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -88,7 +88,7 @@
             font-size: 1.2rem;
             font-weight: 400;
             max-width: 700px;
-            margin: 0 auto 35px auto;
+            margin: 0 auto 25px auto; /* Compacted */
             letter-spacing: 0.5px;
             line-height: 1.6;
         }
@@ -208,7 +208,7 @@
         .container {
             max-width: 1300px;
             margin: 0 auto;
-            padding: 0 20px 60px 20px;
+            padding: 0 20px 40px 20px; /* Tightened bottom */
         }
 
         .cards-grid {
@@ -660,7 +660,7 @@
 <div class="hero-section">
     <div class="hero-bg-grid"></div>
     <h1 class="hero-title">Environmental Monitoring & Analytics Platform</h1>
-    <p class="hero-subtitle">Real-time telemetry, AI insights, and automated environmental control powered by distributed IoT sensor networks.</p>
+    <p class="hero-subtitle">Real-time telemetry, AI insights, and automated environmental control</p>
     
     <div class="hero-status-row">
         <div class="status-pill">
@@ -718,14 +718,34 @@
                     <span class="w-value"><span id="w_pres">--</span> hPa</span>
                 </div>
             </div>
-            <div class="weather-divider" id="w_div_2"></div>
+            <div class="weather-divider"></div>
             <div class="weather-location">
-                <i class="fa fa-map-marker" style="color: #64d2ff;"></i> <span id="w_city">--</span>
+                <div class="location-pill">
+                    <i class="fa fa-map-marker"></i>
+                    <span id="w_city">--</span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="cards-grid">
-        <!-- Temperature Card -->
+    <div class="section-title" style="text-align: center; margin-top: 30px; margin-bottom: 25px;"><i class="fa fa-globe"></i> Environmental Monitoring</div>
+    
+    <div class="cards-grid env-monitoring-grid">
+        <style>
+            .env-monitoring-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            @media (max-width: 1100px) {
+                .env-monitoring-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media (max-width: 600px) {
+                .env-monitoring-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+        <!-- Card 1: Temperature -->
         <div class="glass-card" id="temp_card">
             <div class="card-header">
                 <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-thermometer-half"></i> Temperature</h4></a>
@@ -738,103 +758,193 @@
             <div id="temp_status" class="card-status status-normal">Waiting...</div>
         </div>
 
-        <!-- Humidity Card -->
-        <div class="glass-card" id="pres_card">
+        <!-- Card 2: Humidity -->
+        <div class="glass-card" id="hum_card">
             <div class="card-header">
                 <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-tint"></i> Humidity</h4></a>
+                <label class="switch">
+                    <input id="hum_check" type="checkbox" class="sensor-checkbox" data-sensor="humidity" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="card-value"><span id="hum_raw">--</span> <span class="card-unit">%</span></div>
+            <div id="hum_status" class="card-status status-normal">Waiting...</div>
+        </div>
+
+        <!-- Card 3: Pressure -->
+        <div class="glass-card" id="pres_card">
+            <div class="card-header">
+                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-dashboard"></i> Pressure</h4></a>
                 <label class="switch">
                     <input id="pres_check" type="checkbox" class="sensor-checkbox" data-sensor="pressure" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
-            <div class="card-value"><span id="pres_raw">--</span> <span class="card-unit">%</span></div>
+            <div class="card-value"><span id="pres_raw">--</span> <span class="card-unit">hPa</span></div>
             <div id="pres_status" class="card-status status-normal">Waiting...</div>
         </div>
 
-        <!-- Air Quality Card -->
-        <div class="glass-card" id="air_card">
+        <!-- Card 4: Altitude -->
+        <div class="glass-card" id="alt_card">
             <div class="card-header">
-                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-leaf"></i> Air Quality</h4></a>
+                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-area-chart"></i> Altitude</h4></a>
                 <label class="switch">
-                    <input id="air_check" type="checkbox" class="sensor-checkbox" data-sensor="air" checked>
+                    <input id="alt_check" type="checkbox" class="sensor-checkbox" data-sensor="altitude" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
-            <div class="card-value"><span id="air_raw">--</span> <span class="card-unit">AQI</span></div>
-            <div id="air_status" class="card-status status-normal">Waiting...</div>
+            <div class="card-value"><span id="alt_raw">--</span> <span class="card-unit">m</span></div>
+            <div id="alt_status" class="card-status status-normal">Waiting...</div>
+        </div>
+    </div>
+
+    <div class="section-title" style="text-align: center; margin-top: 50px; margin-bottom: 25px;"><i class="fa fa-leaf"></i> Smart Agriculture</div>
+    
+    <div class="cards-grid agriculture-layout">
+        <style>
+            .agriculture-layout {
+                display: grid;
+                grid-template-columns: 1fr 2fr 1fr;
+                gap: 24px;
+                align-items: stretch;
+            }
+            @media (max-width: 1100px) {
+                .agriculture-layout {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .agri-card {
+                padding: 18px 24px !important;
+                min-height: auto !important;
+            }
+        </style>
+        
+        <!-- Order 1: Soil Moisture -->
+        <div class="glass-card agri-card" id="soil_card">
+            <div class="card-header" style="margin-bottom: 15px;">
+                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-tint"></i> Soil Moisture</h4></a>
+                <label class="switch">
+                    <input id="soil_check" type="checkbox" class="sensor-checkbox" data-sensor="soil" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="card-value" style="margin-bottom: 10px;"><span id="soil_raw">--</span> <span class="card-unit">%</span></div>
+            <div id="soil_status" class="card-status status-normal">Waiting...</div>
         </div>
 
-        <!-- Light Card -->
-        <div class="glass-card" id="light_card">
-            <div class="card-header">
-                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-lightbulb-o"></i> Light Intensity</h4></a>
+        <!-- Order 2: Smart Pump (Larger) -->
+        <div class="glass-card agri-card" id="pump_card" style="border: 1px solid rgba(50, 215, 75, 0.3); box-shadow: 0 0 20px rgba(50, 215, 75, 0.1);">
+            <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+                <div class="pump-top-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 class="card-title" style="color: #32d74b; font-size: 1.1rem; margin: 0;"><i class="fa fa-microchip"></i> SMART PUMP</h4>
+                    <div class="mode-toggle-pill" style="display: flex; align-items: center; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.1); position: relative; width: 140px; height: 32px;">
+                        <div id="mode_indicator_bg" style="position: absolute; width: 66px; height: 24px; background: rgba(166, 68, 255, 0.2); border: 1px solid rgba(166, 68, 255, 0.4); border-radius: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); left: 4px;"></div>
+                        <div style="flex: 1; text-align: center; z-index: 1; cursor: pointer; font-size: 0.65rem; font-weight: 800; color: #a644ff; transition: color 0.3s;" id="label_manual" onclick="setPumpMode(false)">MANUAL</div>
+                        <div style="flex: 1; text-align: center; z-index: 1; cursor: pointer; font-size: 0.65rem; font-weight: 800; color: #86868b; transition: color 0.3s;" id="label_auto" onclick="setPumpMode(true)">AUTO</div>
+                        <input type="checkbox" id="pump_mode_toggle" style="display:none;" onchange="syncModeUI(this.checked)">
+                    </div>
+                </div>
+                
+                <div class="pump-main-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="pump-indicator">
+                        <div class="pump-state-text" id="pump_val" style="color: #f5f5f7; font-size: 2.2rem; font-weight: 700; line-height: 1;">IDLE</div>
+                        <div class="pump-state-sub" style="font-size: 0.8rem; color: #86868b; margin-top: 5px;"><i class="fa fa-circle" style="font-size: 6px; margin-right: 6px; vertical-align: middle;"></i>Standing by</div>
+                    </div>
+                    <div class="pump-manual-switch">
+                        <label class="switch" id="pump_switch_container">
+                            <input id="pump_check" type="checkbox" onchange="togglePump(this)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pump-bottom-row" style="padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                    <div class="pump-rule-text" style="font-size: 0.8rem; color: #86868b;">
+                        <i class="fa fa-info-circle"></i>
+                        Control: <span class="rule-value" id="reason_lbl" style="color: #32d74b; font-weight: 700;">MANUAL</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order 3: Light Level -->
+        <div class="glass-card agri-card" id="light_card">
+            <div class="card-header" style="margin-bottom: 15px;">
+                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-sun-o"></i> Light Level</h4></a>
                 <label class="switch">
                     <input id="light_check" type="checkbox" class="sensor-checkbox" data-sensor="light" checked>
                     <span class="slider round"></span>
                 </label>
             </div>
-            <div class="card-value"><span id="light_raw">--</span> <span class="card-unit">lux</span></div>
+            <div class="card-value" style="margin-bottom: 10px;"><span id="light_raw">--</span> <span class="card-unit">lux</span></div>
             <div id="light_status" class="card-status status-normal">Waiting...</div>
-        </div>
-
-        <!-- Soil Moisture Card -->
-        <div class="glass-card" id="soil_card">
-            <div class="card-header">
-                <a href="/detail" style="text-decoration:none;"><h4 class="card-title"><i class="fa fa-tint"></i> Soil Moisture</h4></a>
-            </div>
-            <div class="card-value"><span id="soil_raw">--</span> <span class="card-unit">%</span></div>
-            <div id="soil_status" class="card-status status-normal">Waiting...</div>
-        </div>
-
-        <!-- Smart Irrigation Card (Wide) -->
-        <div class="glass-card pump-card-wide" id="pump_card" style="border-color: rgba(50,215,75,0.3);">
-            <div class="pump-inner">
-                <!-- Top Row: Title + Mode Toggle -->
-                <div class="pump-top-row">
-                    <h4 class="card-title" style="color: #f5f5f7;"><i class="fa fa-shower" style="margin-right: 8px; color: #32d74b;"></i>Smart Pump</h4>
-                    <div class="mode-toggle-group">
-                        <span class="mode-label" id="mode_lbl_manual">MANUAL</span>
-                        <label class="switch" style="width: 44px; height: 24px;">
-                            <input id="mode_check" type="checkbox" onchange="toggleMode(this)">
-                            <span class="slider round" style="border-radius: 24px;"></span>
-                            <style>#mode_check + .slider:before { height: 18px; width: 18px; left: 2px; bottom: 2px; } #mode_check:checked + .slider:before { transform: translateX(20px); }</style>
-                        </label>
-                        <span class="mode-label" id="mode_lbl_auto">AUTO</span>
-                    </div>
-                </div>
-
-                <!-- Center Left: State -->
-                <div class="pump-center">
-                    <div class="pump-state-text" id="pump_val" style="color: #86868b;">IDLE</div>
-                    <div class="pump-state-sub"><i class="fa fa-circle" style="font-size: 8px; margin-right: 6px; vertical-align: middle;"></i>Pump is standing by</div>
-                </div>
-
-                <!-- Center Right: Switch -->
-                <div class="pump-switch-area">
-                    <label class="switch" id="pump_switch_container">
-                        <input id="pump_check" type="checkbox" onchange="togglePump(this)">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-
-                <!-- Bottom Row: Rule Info -->
-                <div class="pump-bottom-row">
-                    <div class="pump-rule-text">
-                        <i class="fa fa-info-circle"></i>
-                        <span>Control: <span class="rule-value" id="reason_lbl">AUTO</span></span>
-                    </div>
-                    <div class="pump-rule-text" style="color: rgba(255,255,255,0.35); font-size: 0.8rem;">
-                        <i class="fa fa-cog fa-spin" style="animation-duration: 4s;"></i>
-                        Hysteresis &lt;30% ON · &gt;60% OFF
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <div class="section-title">Connected Devices</div>
-    <div class="cards-grid" id="devices-container">
-        <div style="color:#86868b; grid-column: 1 / -1; text-align: center;">Waiting for device heartbeats...</div>
+     <!-- New Bottom Dual Section: Connected Devices | Export Reports -->
+    <div class="bottom-dual-row">
+        <style>
+            .bottom-dual-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 60px; /* Increased to prevent collapsing */
+                margin-top: 50px;
+                margin-bottom: 50px;
+                align-items: stretch;
+            }
+            @media (max-width: 1100px) {
+                .bottom-dual-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .capsule-title {
+                display: inline-block;
+                padding: 10px 28px;
+                border: 2px solid transparent;
+                border-radius: 40px;
+                color: #f5f5f7;
+                font-size: 1.15rem;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                margin-bottom: 20px;
+            }
+        </style>
+
+        <!-- Left: Connected Devices -->
+        <div class="bottom-col" style="display: flex; flex-direction: column;">
+            <div style="text-align: center;">
+                <span class="capsule-title" style="background: linear-gradient(#0d0d12, #0d0d12) padding-box, linear-gradient(135deg, #a644ff 0%, #0a84ff 100%) border-box; box-shadow: 0 0 15px rgba(166, 68, 255, 0.15);">Connected Devices</span>
+            </div>
+            <div id="devices-container" style="display: flex; flex-grow: 1; flex-direction: column; gap: 15px; align-items: stretch;">
+                <div style="color:#86868b; text-align: center; padding: 30px;">Waiting...</div>
+            </div>
+        </div>
+
+        <!-- Right: Export Reports -->
+        <div class="bottom-col" style="display: flex; flex-direction: column;">
+            <div style="text-align: center;">
+                <span class="capsule-title" style="background: linear-gradient(#0d0d12, #0d0d12) padding-box, linear-gradient(135deg, #32d74b 0%, #0a84ff 100%) border-box; box-shadow: 0 0 15px rgba(50, 215, 75, 0.15);">Export Reports</span>
+            </div>
+            <div class="glass-card" id="export_card" style="margin: 0; min-height: 180px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; padding: 25px; background: rgba(13, 13, 18, 0.4);">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h4 style="font-weight: 700; color: #f5f5f7; font-size: 1.2rem; margin: 0 0 4px 0;"><i class="fa fa-file-pdf-o" style="margin-right: 10px; color: #ff453a;"></i>Report Generator</h4>
+                    <p style="color: #86868b; font-size: 0.85rem; margin: 0;">Export telemetry history as PDF</p>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: flex-end; justify-content: center; flex-wrap: wrap;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <input type="date" id="export_start" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; outline: none; width: 150px;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <input type="date" id="export_end" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; outline: none; width: 150px;">
+                    </div>
+                    <button id="export_pdf_btn" onclick="exportPDF()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); border: none; color: white; padding: 10px 22px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">
+                        <i class="fa fa-download"></i> PDF
+                    </button>
+                </div>
+                <div id="export_status" style="text-align: center; font-size: 0.85rem; color: #86868b; display: none; margin-top: 10px;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Smart Predictions Master Module -->
@@ -931,42 +1041,34 @@
         </div>
     </div>
 
-    <!-- Report Export Section -->
-    <div class="section-title" style="margin-bottom: 30px;">
-        <span style="display: inline-block; padding: 12px 36px; border: 2px solid transparent; border-radius: 40px; background: linear-gradient(#0d0d12, #0d0d12) padding-box, linear-gradient(135deg, #32d74b 0%, #0a84ff 100%) border-box; box-shadow: 0 0 20px rgba(50, 215, 75, 0.3); color: #f5f5f7; font-size: 1.4rem; font-weight: 600; letter-spacing: 0.5px;">Export Reports</span>
-    </div>
 
-    <div class="glass-card" id="export_card" style="margin-bottom: 50px; max-width: 700px; margin-left: auto; margin-right: auto;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h4 style="font-weight: 600; color: #f5f5f7; font-size: 1.15rem; margin: 0 0 8px 0;"><i class="fa fa-file-pdf-o" style="margin-right: 8px; color: #ff453a;"></i>Generate Telemetry Report</h4>
-            <p style="color: #86868b; font-size: 0.9rem; margin: 0;">Select a date range to export sensor history as a PDF document.</p>
-        </div>
-
-        <div style="display: flex; gap: 16px; align-items: flex-end; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-                <label style="font-size: 0.8rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Start Date</label>
-                <input type="date" id="export_start" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 12px 16px; border-radius: 14px; font-size: 1rem; font-family: 'Inter', sans-serif; outline: none; min-width: 180px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-                <label style="font-size: 0.8rem; color: #86868b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">End Date</label>
-                <input type="date" id="export_end" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: #f5f5f7; padding: 12px 16px; border-radius: 14px; font-size: 1rem; font-family: 'Inter', sans-serif; outline: none; min-width: 180px; transition: border-color 0.3s ease;" onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--glass-border)'">
-            </div>
-            <button id="export_pdf_btn" onclick="exportPDF()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); border: none; color: white; padding: 12px 28px; border-radius: 14px; font-size: 1rem; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,69,58,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(255,69,58,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,69,58,0.3)'">
-                <i class="fa fa-download"></i> Download PDF
-            </button>
-        </div>
-
-        <div id="export_status" style="text-align: center; font-size: 0.9rem; color: #86868b; display: none;"></div>
-    </div>
 
     <div class="section-title">Telemetry Analytics</div>
 
-    <div class="graphs-grid">
+    <style>
+        .graphs-grid-refined {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        @media (max-width: 1200px) {
+            .graphs-grid-refined {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 800px) {
+            .graphs-grid-refined {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <div class="graphs-grid-refined">
         <div class="graph-wrapper" id="tempGraph"></div>
+        <div class="graph-wrapper" id="humidityGraph"></div>
         <div class="graph-wrapper" id="pressureGraph"></div>
-        <div class="graph-wrapper" id="airQualityGraph"></div>
+        <div class="graph-wrapper" id="altitudeGraph"></div>
         <div class="graph-wrapper" id="lightGraph"></div>
-        <div class="graph-wrapper full" id="gaugeGraph"></div>
+        <div class="graph-wrapper" id="gaugeGraph"></div> <!-- Now part of the 3-column grid -->
     </div>
 
     <!-- Smart System Status Center Section -->
@@ -1104,35 +1206,39 @@
     };
 
     let times = [];
-    let temperature = [];
-    let pressure = [];
-    let airQuality = [];
-    let lightIntensity = [];
+    let temperatureData = [];
+    let humidityData = [];
+    let pressureData = [];
+    let altitudeData = [];
+    let lightData = [];
 
     const purpleColor = '#a644ff';
 
     // Initialize Empty Plots
-    Plotly.newPlot('tempGraph', [{ x: times, y: temperature, mode: 'lines', name: 'Temp', line: {color: purpleColor, shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(166,68,255,0.1)'}], 
-        {...darkLayout, title: {text: 'Temperature Trend', font: {color: '#f5f5f7', size: 16}}}
+    Plotly.newPlot('tempGraph', [{ x: times, y: temperatureData, mode: 'lines', name: 'Temp', line: {color: purpleColor, shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(166,68,255,0.1)'}], 
+        {...darkLayout, title: {text: 'Temperature Trend (°C)', font: {color: '#f5f5f7', size: 16}}}
     );
-    Plotly.newPlot('pressureGraph', [{ x: times, y: pressure, mode: 'lines', name: 'Hum', line: {color: '#64d2ff', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(100,210,255,0.1)'}], 
-        {...darkLayout, title: {text: 'Humidity Trend', font: {color: '#f5f5f7', size: 16}}}
+    Plotly.newPlot('humidityGraph', [{ x: times, y: humidityData, mode: 'lines', name: 'Hum', line: {color: '#64d2ff', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(100,210,255,0.1)'}], 
+        {...darkLayout, title: {text: 'Humidity Trend (%)', font: {color: '#f5f5f7', size: 16}}}
     );
-    Plotly.newPlot('airQualityGraph', [{ x: times, y: airQuality, mode: 'lines', name: 'AQI', line: {color: '#32d74b', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(50,215,75,0.1)'}], 
-        {...darkLayout, title: {text: 'Air Quality Trend', font: {color: '#f5f5f7', size: 16}}}
+    Plotly.newPlot('pressureGraph', [{ x: times, y: pressureData, mode: 'lines', name: 'hPa', line: {color: '#32d74b', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(50,215,75,0.1)'}], 
+        {...darkLayout, title: {text: 'Atmospheric Pressure (hPa)', font: {color: '#f5f5f7', size: 16}}}
     );
-    Plotly.newPlot('lightGraph', [{ x: times, y: lightIntensity, mode: 'lines', name: 'Lux', line: {color: '#ffd60a', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(255,214,10,0.1)'}], 
-        {...darkLayout, title: {text: 'Light Intensity Trend', font: {color: '#f5f5f7', size: 16}}}
+    Plotly.newPlot('altitudeGraph', [{ x: times, y: altitudeData, mode: 'lines', name: 'm', line: {color: '#ffd60a', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(255,214,10,0.1)'}], 
+        {...darkLayout, title: {text: 'Altitude Trend (m)', font: {color: '#f5f5f7', size: 16}}}
+    );
+    Plotly.newPlot('lightGraph', [{ x: times, y: lightData, mode: 'lines', name: 'lux', line: {color: '#ff9f0a', shape: 'spline', width: 4}, fill: 'tozeroy', fillcolor: 'rgba(255,159,10,0.1)'}], 
+        {...darkLayout, title: {text: 'Light Level Trend (lux)', font: {color: '#f5f5f7', size: 16}}}
     );
 
     Plotly.newPlot('gaugeGraph', [{
         type: "indicator",
         mode: "gauge+number",
         value: 0,
-        title: { text: "Current Temperature", font: {color: '#f5f5f7', size: 20} },
-        number: { suffix: " °C", font: {color: '#f5f5f7', size: 40} },
+        title: { text: "Current Temperature", font: {color: '#f5f5f7', size: 16} },
+        number: { suffix: " °C", font: {color: '#f5f5f7', size: 32} },
         gauge: {
-            axis: { range: [0, 50], tickwidth: 2, tickcolor: "rgba(255,255,255,0.5)", tickfont: {size: 14} },
+            axis: { range: [0, 50], tickwidth: 2, tickcolor: "rgba(255,255,255,0.5)", tickfont: {size: 11} },
             bar: { color: purpleColor, thickness: 0.25 },
             bgcolor: "rgba(255,255,255,0.05)",
             borderwidth: 2,
@@ -1144,28 +1250,35 @@
                 { range: [35, 50], color: "rgba(255,69,58,0.15)" }
             ]
         }
-    }], {...darkLayout, margin: { t: 80, b: 40, l: 60, r: 60 }});
+    }], {
+        ...darkLayout,
+        margin: { t: 60, b: 30, l: 30, r: 30 },
+        height: 340
+    });
 
     function updatePlot(data) {
         let currentTime = new Date();
         times.push(currentTime);
-        temperature.push(document.getElementById('temp_check').checked ? parseFloat(data.temperature) : null);
-        pressure.push(document.getElementById('pres_check').checked ? parseFloat(data.pressure) : null);
-        airQuality.push(document.getElementById('air_check').checked ? parseFloat(data.airQuality) : null);
-        lightIntensity.push(document.getElementById('light_check').checked ? parseFloat(data.lightIntensity) : null);
+        temperatureData.push(document.getElementById('temp_check').checked ? parseFloat(data.temperature) : null);
+        humidityData.push(document.getElementById('hum_check').checked ? parseFloat(data.humidity) : null);
+        pressureData.push(document.getElementById('pres_check').checked ? parseFloat(data.pressure) : null);
+        altitudeData.push(document.getElementById('alt_check').checked ? parseFloat(data.altitude) : null);
+        lightData.push(document.getElementById('light_check').checked ? parseFloat(data.lightLevel) : null);
 
         if (times.length > 20) {
             times.shift();
-            temperature.shift();
-            pressure.shift();
-            airQuality.shift();
-            lightIntensity.shift();
+            temperatureData.shift();
+            humidityData.shift();
+            pressureData.shift();
+            altitudeData.shift();
+            lightData.shift();
         }
 
-        Plotly.update('tempGraph', { x: [times], y: [temperature] });
-        Plotly.update('pressureGraph', { x: [times], y: [pressure] });
-        Plotly.update('airQualityGraph', { x: [times], y: [airQuality] });
-        Plotly.update('lightGraph', { x: [times], y: [lightIntensity] });
+        Plotly.update('tempGraph', { x: [times], y: [temperatureData] });
+        Plotly.update('humidityGraph', { x: [times], y: [humidityData] });
+        Plotly.update('pressureGraph', { x: [times], y: [pressureData] });
+        Plotly.update('altitudeGraph', { x: [times], y: [altitudeData] });
+        Plotly.update('lightGraph', { x: [times], y: [lightData] });
         Plotly.update('gaugeGraph', { value: [parseFloat(data.temperature)] });
     }
 </script>
@@ -1181,59 +1294,63 @@
         return {text: "Critical", class: "status-danger"};
     }
 
-    function getPresStatus(val) {
+    function getHumStatus(val) {
         if(val < 30) return {text: "Dry", class: "status-warning"};
         if(val <= 60) return {text: "Comfortable", class: "status-normal"};
         if(val <= 80) return {text: "Humid", class: "status-warning"};
         return {text: "Very Humid", class: "status-danger"};
     }
 
-    function getAirStatus(val) {
-        if(val <= 50) return {text: "Good", class: "status-normal"};
-        if(val <= 100) return {text: "Moderate", class: "status-warning"};
-        if(val <= 150) return {text: "Sensitive", class: "status-warning"};
-        if(val <= 200) return {text: "Unhealthy", class: "status-danger"};
-        if(val <= 300) return {text: "Very Unhealthy", class: "status-danger"};
-        return {text: "Hazardous", class: "status-danger"};
+    function getPresStatus(val) {
+        if (val < 1000) return { text: "Low", class: "status-warning" };
+        if (val <= 1025) return { text: "Normal", class: "status-normal" };
+        return { text: "High", class: "status-danger" };
+    }
+
+    function getAltStatus(val) {
+        return { text: "Estimated", class: "status-normal" };
     }
 
     function getLightStatus(val) {
         if(val <= 50) return {text: "Dark", class: "status-low"};
         if(val <= 200) return {text: "Dim", class: "status-warning"};
-        if(val <= 500) return {text: "Normal Indoor", class: "status-normal"};
+        if(val <= 500) return {text: "Moderate", class: "status-normal"};
         if(val <= 1000) return {text: "Bright", class: "status-warning"};
         return {text: "Very Bright", class: "status-danger"};
     }
 
     function applyStatus(elementId, status) {
         const el = document.getElementById(elementId);
+        if (!el) return;
         el.innerText = status.text;
         el.className = `card-status ${status.class}`;
     }
 
     function setValues(data) {
         let t = parseFloat(data.temperature);
+        let h = parseFloat(data.humidity);
         let p = parseFloat(data.pressure);
-        let a = parseFloat(data.airQuality);
-        let l = parseFloat(data.lightIntensity);
+        let alt = parseFloat(data.altitude);
+        let l = parseFloat(data.lightLevel);
 
         if (document.getElementById('temp_check').checked) {
             document.getElementById('temp_raw').innerText = t.toFixed(2);
             applyStatus('temp_status', getTempStatus(t));
         }
-
+        if (document.getElementById('hum_check').checked) {
+            document.getElementById('hum_raw').innerText = h.toFixed(2);
+            applyStatus('hum_status', getHumStatus(h));
+        }
         if (document.getElementById('pres_check').checked) {
             document.getElementById('pres_raw').innerText = p.toFixed(2);
             applyStatus('pres_status', getPresStatus(p));
         }
-
-        if (document.getElementById('air_check').checked) {
-            document.getElementById('air_raw').innerText = a.toFixed(2);
-            applyStatus('air_status', getAirStatus(a));
+        if (document.getElementById('alt_check').checked) {
+            document.getElementById('alt_raw').innerText = alt.toFixed(1);
+            applyStatus('alt_status', getAltStatus(alt));
         }
-
         if (document.getElementById('light_check').checked) {
-            document.getElementById('light_raw').innerText = l.toFixed(2);
+            document.getElementById('light_raw').innerText = l.toFixed(1);
             applyStatus('light_status', getLightStatus(l));
         }
     }
@@ -1256,21 +1373,49 @@
     });
     socket.on('pumpModeUpdate', (data) => {
         let is_auto = data.mode === 'AUTO';
-        document.getElementById('mode_check').checked = is_auto;
-        document.getElementById('reason_lbl').innerText = is_auto ? "AUTO (<30% ON, >60% OFF)" : "MANUAL";
+        const toggle = document.getElementById('pump_mode_toggle');
+        if (toggle) {
+            toggle.checked = is_auto;
+            syncModeUI(is_auto);
+        }
         
-        // Highlight active mode label
-        document.getElementById('mode_lbl_manual').classList.toggle('active', !is_auto);
-        document.getElementById('mode_lbl_auto').classList.toggle('active', is_auto);
+        document.getElementById('reason_lbl').innerText = is_auto ? "AUTO (Logic Active)" : "MANUAL";
         
-        // Disable manual pump toggle in auto mode
-        document.getElementById('pump_check').disabled = is_auto;
-        document.getElementById('pump_switch_container').style.opacity = is_auto ? '0.4' : '1';
-        document.getElementById('pump_switch_container').style.pointerEvents = is_auto ? 'none' : 'auto';
+        // Disable manual pump switch in auto mode
+        const pumpCheck = document.getElementById('pump_check');
+        if (pumpCheck) {
+            pumpCheck.disabled = is_auto;
+            const container = document.getElementById('pump_switch_container');
+            if (container) {
+                container.style.opacity = is_auto ? '0.4' : '1';
+                container.style.pointerEvents = is_auto ? 'none' : 'auto';
+            }
+        }
     });
 
-    function toggleMode(checkbox) {
-        socket.emit('setPumpMode', {mode: checkbox.checked ? 'AUTO' : 'MANUAL'});
+    function setPumpMode(isAuto) {
+        const toggle = document.getElementById('pump_mode_toggle');
+        if (toggle && toggle.checked !== isAuto) {
+            toggle.checked = isAuto;
+            syncModeUI(isAuto);
+            socket.emit('setPumpMode', {mode: isAuto ? 'AUTO' : 'MANUAL'});
+        }
+    }
+
+    function syncModeUI(isAuto) {
+        const indicator = document.getElementById('mode_indicator_bg');
+        const lblManual = document.getElementById('label_manual');
+        const lblAuto = document.getElementById('label_auto');
+        
+        if (indicator && lblManual && lblAuto) {
+            indicator.style.left = isAuto ? '70px' : '4px';
+            lblManual.style.color = isAuto ? '#86868b' : '#a644ff';
+            lblAuto.style.color = isAuto ? '#32d74b' : '#86868b';
+            
+            // Pulse indicator color based on mode
+            indicator.style.background = isAuto ? 'rgba(50, 215, 75, 0.15)' : 'rgba(166, 68, 255, 0.15)';
+            indicator.style.borderColor = isAuto ? 'rgba(50, 215, 75, 0.4)' : 'rgba(166, 68, 255, 0.4)';
+        }
     }
 
     function togglePump(checkbox) {
@@ -1288,8 +1433,14 @@
         const container = document.getElementById('devices-container');
         if (!container) return;
         
+        // Ensure container is centered and not too wide
+        container.style.display = 'flex';
+        container.style.flexWrap = 'wrap';
+        container.style.justifyContent = 'center';
+        container.style.gap = '20px';
+
         if (currentDevices.length === 0) {
-            container.innerHTML = '<div style="color:#86868b; grid-column: 1 / -1; text-align: center;">Waiting for device heartbeats...</div>';
+            container.innerHTML = '<div style="color:#86868b; text-align: center; padding: 20px; width: 100%;">Waiting for device heartbeats...</div>';
             return;
         }
         
@@ -1297,24 +1448,35 @@
         currentDevices.forEach(device => {
             const isOnline = device.status === 'online';
             const statusClass = isOnline ? 'status-normal' : 'status-danger';
-            const borderColor = isOnline ? 'rgba(50,215,75,0.3)' : 'rgba(255,69,58,0.3)';
             const statusText = isOnline ? 'ONLINE' : 'OFFLINE';
             
             const wifi = device.wifi_signal !== null ? `${device.wifi_signal} dBm` : '--';
             const batt = device.battery_level !== null ? `${device.battery_level}%` : '--';
             
             html += `
-            <div class="glass-card" style="border-color: ${borderColor};">
-                <div class="card-header">
-                    <h4 class="card-title" style="color: #f5f5f7;"><i class="fa fa-microchip"></i> ${device.device_id}</h4>
-                    <div class="card-status ${statusClass}">${statusText}</div>
+            <div class="glass-card" style="width: 100%; min-height: 180px; flex: 1; padding: 25px; border-top: 2px solid #a644ff; background: rgba(13, 13, 18, 0.4); margin: 0; display: flex; flex-direction: column; justify-content: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h4 style="margin: 0; font-size: 1.25rem; color: #f5f5f7; display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: 0.5px;">
+                        <i class="fa fa-microchip" style="font-size: 1.1rem; color: #a644ff;"></i>
+                        ${device.device_id.toUpperCase()}
+                    </h4>
+                    <div class="card-status ${statusClass}" style="margin: 0; padding: 6px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; border: 2px solid currentColor;">${statusText}</div>
                 </div>
-                <div style="font-size: 0.95rem; color: #86868b; margin-top: 10px;">
-                    <div style="margin-bottom: 5px;"><i class="fa fa-wifi" style="width:20px; text-align:center;"></i> Signal: ${wifi}</div>
-                    <div style="margin-bottom: 10px;"><i class="fa fa-battery-full" style="width:20px; text-align:center;"></i> Battery: ${batt}</div>
-                    <div style="padding-top: 12px; border-top: 1px solid var(--glass-border); font-size: 0.85rem;">
-                        <i class="fa fa-clock-o"></i> Seen: <span class="time-ago" data-time="${device.last_seen}">--</span>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div style="font-size: 1rem; color: #86868b; display: flex; align-items: center; gap: 12px;">
+                        <i class="fa fa-wifi" style="font-size: 1.1rem; opacity: 0.8; color: #f5f5f7;"></i>
+                        <span style="font-weight: 500;">Sig:</span> <span style="color: #f5f5f7; font-weight: 700;">${wifi}</span>
                     </div>
+                    <div style="font-size: 1rem; color: #86868b; display: flex; align-items: center; gap: 12px;">
+                        <i class="fa fa-battery-full" style="font-size: 1.1rem; opacity: 0.8; color: #f5f5f7;"></i>
+                        <span style="font-weight: 500;">Bat:</span> <span style="color: #f5f5f7; font-weight: 700;">${batt}</span>
+                    </div>
+                </div>
+
+                <div style="padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.95rem; color: #86868b; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa fa-clock-o" style="font-size: 0.9rem;"></i>
+                    Last Seen: <span class="time-ago" data-time="${device.last_seen}" style="font-weight: 700; color: #f5f5f7;">--</span>
                 </div>
             </div>`;
         });
@@ -1346,11 +1508,19 @@
 
     socket.on('pumpData', (data) => {
         let is_on = data.state === 'ON';
-        document.getElementById('pump_check').checked = is_on;
-        document.getElementById('pump_val').innerText = is_on ? "ACTIVE" : "IDLE";
-        document.getElementById('pump_val').style.color = is_on ? "#32d74b" : "#86868b";
-        document.getElementById('pump_card').style.boxShadow = is_on ? "0 0 25px rgba(50,215,75,0.2)" : "none";
-        document.getElementById('pump_card').style.borderColor = is_on ? "rgba(50,215,75,0.6)" : "rgba(50,215,75,0.3)";
+        const pCheck = document.getElementById('pump_check');
+        const pVal = document.getElementById('pump_val');
+        const pCard = document.getElementById('pump_card');
+        
+        if (pCheck) pCheck.checked = is_on;
+        if (pVal) {
+            pVal.innerText = is_on ? "ACTIVE" : "IDLE";
+            pVal.style.color = is_on ? "#32d74b" : "#86868b";
+        }
+        if (pCard) {
+            pCard.style.boxShadow = is_on ? "0 0 25px rgba(50,215,75,0.2)" : "0 0 20px rgba(50, 215, 75, 0.1)";
+            pCard.style.borderColor = is_on ? "rgba(50,215,75,0.6)" : "rgba(50,215,75,0.3)";
+        }
         
         // Update subtitle
         const sub = document.querySelector('.pump-state-sub');
