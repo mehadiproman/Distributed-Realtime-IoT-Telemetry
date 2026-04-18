@@ -53,7 +53,7 @@ sensor_buffer = []
 
 # -------------------- WEATHER CONFIG --------------------
 
-WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "4e277f5f6b9755912b2ee93a3ae50ac6")
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 WEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 DEFAULT_CITY = "Dhaka"
 
