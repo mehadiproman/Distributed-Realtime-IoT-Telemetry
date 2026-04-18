@@ -29,6 +29,11 @@ def _format_record(r):
             d["last_seen"] = d["last_seen"].astimezone(bst_tz)
         except Exception:
             d["last_seen"] = d["last_seen"].replace(tzinfo=timezone.utc).astimezone(bst_tz)
+
+    # Convert Decimal to float for JSON/ML compatibility
+    for key in ["temperature", "humidity", "pressure", "air_quality", "light_intensity", "moisture", "wifi_signal", "battery_level"]:
+        if d.get(key) is not None:
+            d[key] = float(d[key])
             
     return d
 
@@ -41,10 +46,18 @@ async def init_db():
                 id SERIAL PRIMARY KEY,
                 timestamp TIMESTAMPTZ DEFAULT NOW(),
                 temperature NUMERIC,
+                humidity NUMERIC,
                 pressure NUMERIC,
                 air_quality NUMERIC,
                 light_intensity NUMERIC
             );
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sensor_data' AND column_name='humidity') THEN
+                    ALTER TABLE sensor_data ADD COLUMN humidity NUMERIC;
+                END IF;
+            END $$;
+
             CREATE TABLE IF NOT EXISTS soil_data (
                 id SERIAL PRIMARY KEY,
                 timestamp TIMESTAMPTZ DEFAULT NOW(),
@@ -94,13 +107,14 @@ async def get_sensor_data_within_range(time_end_hrs: float, limit: int = 20, off
 
 async def create_sensor_data(data: dict):
     query = """
-        INSERT INTO sensor_data (temperature, pressure, air_quality, light_intensity)
-        VALUES ($1, $2, $3, $4) RETURNING *;
+        INSERT INTO sensor_data (temperature, humidity, pressure, air_quality, light_intensity)
+        VALUES ($1, $2, $3, $4, $5) RETURNING *;
     """
     async with pool.acquire() as conn:
         record = await conn.fetchrow(
             query, 
             data.get('temperature', 0), 
+            data.get('humidity', 0),
             data.get('pressure', 0), 
             data.get('airQuality', 0), 
             data.get('lightIntensity', 0)

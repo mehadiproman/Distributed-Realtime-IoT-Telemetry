@@ -85,11 +85,13 @@ async def save_avg_sensor_data(data: dict):
     if len(sensor_buffer) >= 5:
         # Use .get with 0.0 fallback to prevent 'airQuality' or other missing key errors
         avg_temp = sum(d.get("temperature", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+        avg_hum = sum(d.get("humidity", 0.0) for d in sensor_buffer) / len(sensor_buffer)
         avg_pres = sum(d.get("pressure", 0.0) for d in sensor_buffer) / len(sensor_buffer)
         avg_light = sum(d.get("lightLevel", 0.0) for d in sensor_buffer) / len(sensor_buffer)
 
         data_obj = {
             "temperature": round(avg_temp, 2),
+            "humidity": round(avg_hum, 2),
             "pressure": round(avg_pres, 2),
             "airQuality": 0.0, # Removed hardware sensor
             "lightIntensity": round(avg_light, 2)
@@ -97,6 +99,7 @@ async def save_avg_sensor_data(data: dict):
 
         await create_sensor_data(data_obj)
         sensor_buffer.clear()
+
 
 # -------------------- MQTT LOOP --------------------
 
