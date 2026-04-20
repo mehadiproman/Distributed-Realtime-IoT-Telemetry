@@ -1,4 +1,3 @@
-````md
 # Smart Environmental Monitoring & Automated Control Platform
 
 An advanced IoT-based real-time environmental monitoring and smart automation system designed for agriculture, farming, laboratories, smart homes, and resource-efficient environments.
@@ -13,13 +12,13 @@ Traditional monitoring often depends on manual checking, delayed responses, and 
 
 This project solves that by providing:
 
-- Real-time sensor monitoring
-- Historical telemetry analytics
-- Smart irrigation automation
-- Live dashboards
-- Report generation
-- Predictive insights from historical data
-- Expandable IoT architecture
+- Real-time sensor monitoring  
+- Historical telemetry analytics  
+- Smart irrigation automation  
+- Live dashboards  
+- Report generation  
+- Predictive insights from historical data  
+- Expandable IoT architecture  
 
 ---
 
@@ -31,11 +30,11 @@ Continuously receives telemetry from ESP32 devices using MQTT.
 
 Tracks:
 
-- Temperature
-- Humidity
-- Light Intensity
-- Soil Moisture
-- Device activity status
+- Temperature  
+- Humidity  
+- Light Intensity  
+- Soil Moisture  
+- Device activity status  
 
 ---
 
@@ -43,10 +42,10 @@ Tracks:
 
 Supports intelligent control logic such as:
 
-- Auto Pump ON when soil moisture is low
-- Auto Pump OFF when moisture reaches threshold
-- Manual / Auto control modes
-- Future-ready fan automation support
+- Auto Pump ON when soil moisture is low  
+- Auto Pump OFF when moisture reaches threshold  
+- Manual / Auto control modes  
+- Future-ready fan automation support  
 
 ---
 
@@ -54,12 +53,12 @@ Supports intelligent control logic such as:
 
 Modern web dashboard with:
 
-- Real-time sensor cards
-- Weather integration
-- Prediction widgets
-- System health status
-- Telemetry charts
-- Connected device indicators
+- Real-time sensor cards  
+- Weather integration  
+- Prediction widgets  
+- System health status  
+- Telemetry charts  
+- Connected device indicators  
 
 ---
 
@@ -67,10 +66,10 @@ Modern web dashboard with:
 
 View past records with:
 
-- Date filters
-- Pagination
-- Searchable telemetry logs
-- Trend analysis
+- Date filters  
+- Pagination  
+- Searchable telemetry logs  
+- Trend analysis  
 
 ---
 
@@ -78,9 +77,9 @@ View past records with:
 
 Generate downloadable reports in professional format:
 
-- PDF reports
-- Sensor summaries
-- Time-range based exports
+- PDF reports  
+- Sensor summaries  
+- Time-range based exports  
 
 ---
 
@@ -88,10 +87,10 @@ Generate downloadable reports in professional format:
 
 Prevent database overload using smart cleanup policies:
 
-- Keep last X days
-- Auto cleanup mode
-- Storage usage stats
-- Preview deletions safely
+- Keep last X days  
+- Auto cleanup mode  
+- Storage usage stats  
+- Preview deletions safely  
 
 ---
 
@@ -99,9 +98,9 @@ Prevent database overload using smart cleanup policies:
 
 Uses trained models for:
 
-- Temperature trend prediction
-- Humidity forecasting
-- Irrigation recommendations
+- Temperature trend prediction  
+- Humidity forecasting  
+- Irrigation recommendations  
 
 ---
 
@@ -109,87 +108,84 @@ Uses trained models for:
 
 ### Backend
 
-- Python 3.10+
-- FastAPI
-- Socket.IO
-- AsyncIO
+- Python 3.10+  
+- FastAPI  
+- Socket.IO  
+- AsyncIO  
 
 ### Database
 
-- PostgreSQL
-- asyncpg
+- PostgreSQL  
+- asyncpg  
 
 ### Communication
 
-- MQTT
-- aiomqtt
+- MQTT  
+- aiomqtt  
 
 ### Frontend
 
-- HTML
-- CSS
-- JavaScript
-- Jinja2 Templates
+- HTML  
+- CSS  
+- JavaScript  
+- Jinja2 Templates  
 
 ### Data / ML
 
-- Pandas
-- scikit-learn
-- joblib
+- Pandas  
+- scikit-learn  
+- joblib  
 
 ### Hardware
 
-- ESP32
-- DHT22 Sensor
-- LDR Sensor
-- Soil Moisture Sensor
-- Relay / Pump Module
+- ESP32  
+- DHT22 Sensor  
+- LDR Sensor  
+- Soil Moisture Sensor  
+- Relay / Pump Module  
 
 ---
 
 ## Project Structure
 
-```text
-IoT-Automation-Project/
-│
-├── .venv/
-├── .vscode/
-│
-├── esp32/
-│   └── esp32_client.ino
-│
-├── fastapi_server/
-│   │
-│   ├── ml/
-│   │   ├── models/
-│   │   │   ├── hum_trend.pkl
-│   │   │   ├── temp_trend.pkl
-│   │   │   └── watering_model.pkl
-│   │   ├── predict.py
-│   │   └── train.py
-│   │
-│   ├── templates/
-│   │   ├── graph.html
-│   │   └── detail.html
-│   │
-│   ├── database.py
-│   ├── main.py
-│   └── report_generator.py
-│
-├── scripts/
-│   ├── create_db.py
-│   └── copy_templates.py
-│
-├── scratch/
-│   └── check_db.py
-│
-├── .env
-├── .gitignore
-├── README.md
-├── requirements.txt
-├── test_mqtt.py
-└── test_mqtt_debug.py
-````
+    IoT-Automation-Project/
+    │
+    ├── .venv/
+    ├── .vscode/
+    │
+    ├── esp32/
+    │   └── esp32_client.ino
+    │
+    ├── fastapi_server/
+    │   ├── ml/
+    │   │   ├── models/
+    │   │   │   ├── hum_trend.pkl
+    │   │   │   ├── temp_trend.pkl
+    │   │   │   └── watering_model.pkl
+    │   │   ├── predict.py
+    │   │   └── train.py
+    │   │
+    │   ├── templates/
+    │   │   ├── graph.html
+    │   │   └── detail.html
+    │   │
+    │   ├── database.py
+    │   ├── main.py
+    │   └── report_generator.py
+    │
+    ├── scripts/
+    │   ├── create_db.py
+    │   └── copy_templates.py
+    │
+    ├── scratch/
+    │   └── check_db.py
+    │
+    ├── .env
+    ├── .gitignore
+    ├── README.md
+    ├── requirements.txt
+    ├── test_mqtt.py
+    └── test_mqtt_debug.py
 
 ---
 
@@ -200,9 +196,7 @@ IoT-Automation-Project/
 ```bash
 git clone <your-repo-url>
 cd IoT-Automation-Project
-```
-
----
+````
 
 ### 2. Create Virtual Environment
 
@@ -224,15 +218,11 @@ Activate:
 source .venv/bin/activate
 ```
 
----
-
 ### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
-
----
 
 ### 4. Configure Environment Variables
 
@@ -251,8 +241,6 @@ MQTT_PORT=1883
 DEFAULT_CITY=Dhaka
 WEATHER_API_KEY=your_api_key
 ```
-
----
 
 ### 5. Start PostgreSQL
 
@@ -285,8 +273,6 @@ http://127.0.0.1:8000/detail
 ---
 
 ## ESP32 Telemetry Format
-
-ESP32 publishes:
 
 ```text
 temperature,humidity,light,soil
