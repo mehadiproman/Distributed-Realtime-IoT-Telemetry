@@ -1,6 +1,6 @@
-# IoT Automation Project Draft II
+# Smart Environmental Monitoring & Automated Control Platform
 
-Real-time IoT telemetry platform built with ESP32 + FastAPI + PostgreSQL + MQTT.
+An IoT-based real-time environmental monitoring & smart automation system for agriculture, farming, labs, & resource management.
 
 ## What It Does
 
@@ -21,15 +21,52 @@ Real-time IoT telemetry platform built with ESP32 + FastAPI + PostgreSQL + MQTT.
 - Pandas + scikit-learn + joblib (prediction models)
 
 ## Project Structure
-
-- `fastapi_server/main.py`: API, Socket.IO events, MQTT loop, background tasks
-- `fastapi_server/database.py`: async DB schema and query helpers
-- `fastapi_server/report_generator.py`: PDF report generation
-- `fastapi_server/ml/train.py`: model training pipeline
-- `fastapi_server/ml/predict.py`: inference engine
-- `fastapi_server/templates/graph.html`: live dashboard
-- `fastapi_server/templates/detail.html`: history, retention, export dashboard
-- `esp32/esp32_client.ino`: ESP32 sketch
+IoT-Automation-Project/
+│
+├── .venv/                      # Python virtual environment
+├── .vscode/                    # VS Code workspace settings
+│
+├── esp32/                      # ESP32 firmware source
+│   └── esp32_client.ino        # Arduino/ESP32 IoT device code
+│
+├── fastapi_server/             # Main backend application
+│   │
+│   ├── __pycache__/            # Python cache files
+│   │
+│   ├── ml/                     # Machine learning module
+│   │   ├── __pycache__/
+│   │   ├── models/             # Trained ML models
+│   │   │   ├── hum_trend.pkl
+│   │   │   ├── temp_trend.pkl
+│   │   │   └── watering_model.pkl
+│   │   │
+│   │   ├── __init__.py
+│   │   ├── predict.py         # Prediction logic
+│   │   └── train.py           # Model training scripts
+│   │
+│   ├── templates/             # Frontend HTML templates
+│   │   ├── detail.html
+│   │   └── graph.html
+│   │
+│   ├── __init__.py
+│   ├── database.py            # DB connection / queries
+│   ├── main.py                # FastAPI app entry point
+│   └── report_generator.py    # PDF/CSV report export
+│
+├── scratch/                   # Temporary test/debug scripts
+│   └── check_db.py
+│
+├── scripts/                   # Utility/helper scripts
+│   ├── copy_templates.py
+│   └── create_db.py
+│
+├── .env                       # Environment variables
+├── .gitignore                 # Git ignored files
+├── README.md                  # Project documentation
+├── requirements.txt           # Python dependencies
+│
+├── test_mqtt_debug.py         # MQTT debug testing
+└── test_mqtt.py               # MQTT communication testing
 
 ## Setup
 
@@ -47,10 +84,10 @@ pip install -r requirements.txt
 
 Database:
 
-- `DB_USER` (default: `postgres`)
-- `DB_PASSWORD` (default: `1234`)
-- `DB_NAME` (default: `home`)
-- `DB_HOST` (default: `127.0.0.1`)
+- `DB_USER` (default: ``)
+- `DB_PASSWORD` (default: ``)
+- `DB_NAME` (default: ``)
+- `DB_HOST` (default: ``)
 - `DB_PORT` (default: `5432`)
 
 MQTT and app:
