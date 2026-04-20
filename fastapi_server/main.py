@@ -27,7 +27,11 @@ from fastapi_server.database import (
     get_sensor_data_by_date_range, get_soil_data_by_date_range,
     get_system_metrics, bst_tz,
     get_history_stats, get_cleanup_preview, delete_old_telemetry,
-    get_retention_settings, set_retention_settings
+    delete_old_telemetry_hours,
+    purge_all_telemetry,
+    get_retention_settings, set_retention_settings,
+    close_db,
+    get_sensor_data_with_soil_within_range,
 )
 from fastapi_server.report_generator import generate_pdf_report
 try:
@@ -46,16 +50,17 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 templates = Jinja2Templates(directory="fastapi_server/templates")
 
 # Configuration
-MQTT_BROKER = "test.mosquitto.org"
-MQTT_PORT = 1883
+MQTT_BROKER = os.getenv("MQTT_BROKER", "test.mosquitto.org")
+MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 
 sensor_buffer = []
+sensor_buffer_last_flush = time.time()  # Track when buffer was last flushed
 
 # -------------------- WEATHER CONFIG --------------------
 
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 WEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
-DEFAULT_CITY = "Dhaka"
+DEFAULT_CITY = os.getenv("DEFAULT_CITY", "Dhaka")
 
 # Simple in-memory cache: { city: { "data": {...}, "timestamp": float } }
 _weather_cache: dict = {}
@@ -76,29 +81,78 @@ class SearchTimeRange(BaseModel):
     limit: int = 20
     offset: int = 0
 
+class AssistantQuestion(BaseModel):
+    question: str
+
 # -------------------- BUFFER LOGIC --------------------
 
 async def save_avg_sensor_data(data: dict):
-    global sensor_buffer
+    """Buffer sensor readings and save average every 5 readings."""
+    global sensor_buffer, sensor_buffer_last_flush
     sensor_buffer.append(data)
-
+    
     if len(sensor_buffer) >= 5:
-        # Use .get with 0.0 fallback to prevent 'airQuality' or other missing key errors
-        avg_temp = sum(d.get("temperature", 0.0) for d in sensor_buffer) / len(sensor_buffer)
-        avg_hum = sum(d.get("humidity", 0.0) for d in sensor_buffer) / len(sensor_buffer)
-        avg_pres = sum(d.get("pressure", 0.0) for d in sensor_buffer) / len(sensor_buffer)
-        avg_light = sum(d.get("lightLevel", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+        try:
+            # Use .get with 0.0 fallback to prevent 'airQuality' or other missing key errors
+            avg_temp = sum(d.get("temperature", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+            avg_hum = sum(d.get("humidity", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+            avg_pres = sum(d.get("pressure", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+            avg_light = sum(d.get("lightLevel", 0.0) for d in sensor_buffer) / len(sensor_buffer)
 
-        data_obj = {
-            "temperature": round(avg_temp, 2),
-            "humidity": round(avg_hum, 2),
-            "pressure": round(avg_pres, 2),
-            "airQuality": 0.0, # Removed hardware sensor
-            "lightIntensity": round(avg_light, 2)
-        }
+            data_obj = {
+                "temperature": round(avg_temp, 2),
+                "humidity": round(avg_hum, 2),
+                "pressure": round(avg_pres, 2),
+                "airQuality": 0.0, # Removed hardware sensor
+                "lightIntensity": round(avg_light, 2)
+            }
 
-        await create_sensor_data(data_obj)
-        sensor_buffer.clear()
+            await create_sensor_data(data_obj)
+        except Exception as e:
+            print(f"Error saving sensor data to DB: {e}")
+        finally:
+            # ALWAYS clear buffer, even if DB write failed
+            # This prevents buffer from getting stuck
+            sensor_buffer.clear()
+            sensor_buffer_last_flush = time.time()
+
+
+async def buffer_timeout_flush():
+    """Periodically flush partial sensor buffer if timeout exceeded."""
+    BUFFER_TIMEOUT_SECS = 30  # Flush every 30 seconds if buffer has any data
+    
+    while True:
+        try:
+            await asyncio.sleep(BUFFER_TIMEOUT_SECS)
+            
+            if sensor_buffer and len(sensor_buffer) < 5:
+                # Buffer has data but less than 5 items and 30s have passed
+                elapsed = time.time() - sensor_buffer_last_flush
+                if elapsed >= BUFFER_TIMEOUT_SECS:
+                    try:
+                        avg_temp = sum(d.get("temperature", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+                        avg_hum = sum(d.get("humidity", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+                        avg_pres = sum(d.get("pressure", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+                        avg_light = sum(d.get("lightLevel", 0.0) for d in sensor_buffer) / len(sensor_buffer)
+
+                        data_obj = {
+                            "temperature": round(avg_temp, 2),
+                            "humidity": round(avg_hum, 2),
+                            "pressure": round(avg_pres, 2),
+                            "airQuality": 0.0,
+                            "lightIntensity": round(avg_light, 2)
+                        }
+                        
+                        await create_sensor_data(data_obj)
+                        print(f"Buffer timeout flush: saved {len(sensor_buffer)} readings")
+                    except Exception as e:
+                        print(f"Error flushing buffer on timeout: {e}")
+                    finally:
+                        sensor_buffer.clear()
+                        sensor_buffer_last_flush = time.time()
+        except Exception as e:
+            print(f"Buffer flush task error: {e}")
+            await asyncio.sleep(5)
 
 
 # -------------------- MQTT LOOP --------------------
@@ -107,6 +161,7 @@ PUMP_MODE = "AUTO"
 current_pump_state = "OFF"
 last_auto_toggle_time = 0
 mqtt_connected_status = False
+background_tasks: list[asyncio.Task] = []
 
 async def mqtt_loop():
     global current_pump_state, last_auto_toggle_time, mqtt_connected_status
@@ -238,12 +293,37 @@ async def heartbeat_monitor():
 
 @app.on_event("startup")
 async def startup_event():
-    global PUMP_MODE
+    global PUMP_MODE, background_tasks
+    
+    # Initialize database (tables only, no blocking operations)
     await init_db()
-    PUMP_MODE = await get_pump_mode()
-    asyncio.create_task(mqtt_loop())
-    asyncio.create_task(heartbeat_monitor())
-    asyncio.create_task(auto_cleanup_task())
+    
+    # Load pump mode asynchronously without blocking startup
+    try:
+        PUMP_MODE = await get_pump_mode()
+    except Exception as e:
+        print(f"Could not load pump mode at startup, using default: {e}")
+        PUMP_MODE = "AUTO"
+    
+    # Start background tasks (non-blocking, they run independently)
+    background_tasks = [
+        asyncio.create_task(mqtt_loop(), name="mqtt_loop"),
+        asyncio.create_task(heartbeat_monitor(), name="heartbeat_monitor"),
+        asyncio.create_task(auto_cleanup_task(), name="auto_cleanup_task"),
+        asyncio.create_task(buffer_timeout_flush(), name="buffer_timeout_flush"),
+    ]
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global background_tasks
+    for task in background_tasks:
+        task.cancel()
+
+    if background_tasks:
+        await asyncio.gather(*background_tasks, return_exceptions=True)
+
+    background_tasks = []
+    await close_db()
 
 # -------------------- ROUTES --------------------
 
@@ -258,7 +338,7 @@ async def graph(request: Request):
 @app.get("/detail", response_class=HTMLResponse)
 async def detail(request: Request):
     # Default to 'All Records' (large range) for initial load to ensure Load More works by default
-    data = await get_sensor_data_within_range(time_end_hrs=87600, limit=20, offset=0)
+    data = await get_sensor_data_with_soil_within_range(time_end_hrs=87600, limit=20, offset=0)
     return templates.TemplateResponse("detail.html", {"request": request, "data": data})
 
 @app.get("/api/sensor")
@@ -271,7 +351,11 @@ async def api_create_sensor(data: SensorDataCreate):
 
 @app.post("/api/sensor/search")
 async def api_search_sensor(time_range: SearchTimeRange):
-    return await get_sensor_data_within_range(time_range.timeEnd, time_range.limit, time_range.offset)
+    return await get_sensor_data_with_soil_within_range(
+        time_end_hrs=time_range.timeEnd,
+        limit=time_range.limit,
+        offset=time_range.offset,
+    )
 
 @app.get("/api/sensor/{item_id}")
 async def api_get_sensor_by_id(item_id: int):
@@ -375,8 +459,17 @@ async def export_pdf(
 
     sensor_data = await get_sensor_data_by_date_range(start_dt, end_dt)
     soil_data = await get_soil_data_by_date_range(start_dt, end_dt)
+    prediction_summary = None
+    if ml_engine:
+        try:
+            if not ml_engine.models:
+                ml_engine.load_models()
+            if sensor_data and soil_data:
+                prediction_summary = ml_engine.get_summary(list(reversed(sensor_data[:10])), list(reversed(soil_data[:5])))
+        except Exception as prediction_error:
+            print(f"Prediction summary unavailable for PDF export: {prediction_error}")
 
-    pdf_bytes = generate_pdf_report(sensor_data, soil_data, start, end)
+    pdf_bytes = generate_pdf_report(sensor_data, soil_data, start, end, prediction_summary)
 
     filename = f"IoT_Report_{start}_to_{end}.pdf"
     return StreamingResponse(
@@ -412,6 +505,172 @@ async def get_prediction_summary():
         return summary
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.post("/api/assistant/ask")
+async def ask_farm_assistant(payload: AssistantQuestion):
+    """Mini assistant that answers farming questions from live telemetry + ML summary."""
+    question = (payload.question or "").strip()
+    if not question:
+        return JSONResponse(status_code=400, content={"detail": "Question is required"})
+
+    sensors = await get_all_sensor_data(limit=1)
+    soil = await get_all_soil_data(limit=1)
+    sensor_window = await get_all_sensor_data(limit=120)
+    soil_window = await get_all_soil_data(limit=120)
+
+    latest_sensor = sensors[0] if sensors else {}
+    latest_soil = soil[0] if soil else {}
+
+    temp = float(latest_sensor.get("temperature", 0.0)) if latest_sensor else 0.0
+    hum = float(latest_sensor.get("humidity", latest_sensor.get("pressure", 0.0))) if latest_sensor else 0.0
+    light = float(latest_sensor.get("light_intensity", latest_sensor.get("lightIntensity", 0.0))) if latest_sensor else 0.0
+    moisture = float(latest_soil.get("moisture", 0.0)) if latest_soil else 0.0
+
+    prediction = None
+    try:
+        if ml_engine and not ml_engine.models:
+            ml_engine.load_models()
+
+        if ml_engine:
+            pred_sensors = await get_all_sensor_data(limit=10)
+            pred_soil = await get_all_soil_data(limit=5)
+            if len(pred_sensors) >= 5 and len(pred_soil) >= 1:
+                prediction = ml_engine.get_summary(pred_sensors, pred_soil)
+    except Exception as prediction_error:
+        print(f"Assistant prediction context unavailable: {prediction_error}")
+
+    q = question.lower()
+
+    def _has_any(tokens):
+        return any(t in q for t in tokens)
+
+    def _avg(values):
+        clean = [float(v) for v in values if v is not None]
+        if not clean:
+            return None
+        return sum(clean) / len(clean)
+
+    avg_temp = _avg([r.get("temperature") for r in sensor_window])
+    avg_hum = _avg([r.get("humidity", r.get("pressure")) for r in sensor_window])
+    avg_light = _avg([r.get("light_intensity", r.get("lightIntensity")) for r in sensor_window])
+    avg_moisture = _avg([r.get("moisture") for r in soil_window])
+
+    is_average_question = _has_any(["average", "avg", "mean"])
+    asks_temp = _has_any(["temperature", "temp", "temprature", "temperatue"])
+    asks_hum = _has_any(["humidity", "humid", "moist air"])
+    asks_light = _has_any(["light", "lux", "sunlight"])
+    asks_soil = _has_any(["soil", "moisture", "irrig", "water"])
+
+    def _general_status_text():
+        pred_part = ""
+        if prediction and not prediction.get("error"):
+            pred_part = (
+                f" AI says risk is {prediction.get('risk_level', 'LOW')} "
+                f"({prediction.get('risk_score', 0)}), and action is: {prediction.get('recommended_action', 'Hold steady')}."
+            )
+        return (
+            f"Current readings -> Soil moisture: {moisture:.1f}%, temperature: {temp:.1f} C, "
+            f"humidity: {hum:.1f}%, light: {light:.1f} lux.{pred_part}"
+        )
+
+    if is_average_question and (asks_temp or asks_hum or asks_light or asks_soil):
+        metric_parts = []
+        if asks_temp:
+            metric_parts.append(
+                f"average temperature is {avg_temp:.1f} C" if avg_temp is not None else "average temperature is unavailable"
+            )
+        if asks_hum:
+            metric_parts.append(
+                f"average humidity is {avg_hum:.1f}%" if avg_hum is not None else "average humidity is unavailable"
+            )
+        if asks_light:
+            metric_parts.append(
+                f"average light level is {avg_light:.1f} lux" if avg_light is not None else "average light level is unavailable"
+            )
+        if asks_soil:
+            metric_parts.append(
+                f"average soil moisture is {avg_moisture:.1f}%" if avg_moisture is not None else "average soil moisture is unavailable"
+            )
+
+        metric_text = "; ".join(metric_parts) if metric_parts else "average metrics are unavailable"
+        answer = f"From recent telemetry, the {metric_text}."
+
+    elif is_average_question:
+        avg_parts = [
+            f"average temperature is {avg_temp:.1f} C" if avg_temp is not None else "average temperature is unavailable",
+            f"average humidity is {avg_hum:.1f}%" if avg_hum is not None else "average humidity is unavailable",
+            f"average soil moisture is {avg_moisture:.1f}%" if avg_moisture is not None else "average soil moisture is unavailable",
+            f"average light level is {avg_light:.1f} lux" if avg_light is not None else "average light level is unavailable",
+        ]
+        answer = "From recent telemetry, " + "; ".join(avg_parts) + "."
+
+    elif any(k in q for k in ["water", "irrig", "pump", "moisture"]):
+        if moisture < 30:
+            answer = (
+                f"Soil moisture is {moisture:.1f}%, which is dry. Recommended action: irrigate now for a short cycle, "
+                "then recheck moisture after 20-30 minutes to avoid overwatering."
+            )
+        elif moisture < 45:
+            answer = (
+                f"Soil moisture is {moisture:.1f}%, slightly dry. Prepare irrigation soon and monitor the next reading cycle."
+            )
+        elif moisture > 80:
+            answer = (
+                f"Soil moisture is {moisture:.1f}%, which is high. Avoid watering now to prevent root stress."
+            )
+        else:
+            answer = (
+                f"Soil moisture is {moisture:.1f}%, currently in a healthy range. Continue current irrigation schedule."
+            )
+    elif any(k in q for k in ["temperature", "temp", "temprature", "temperatue", "heat", "hot", "cold"]):
+        answer = (
+            f"Temperature is {temp:.1f} C. For most crops, stable growth is often around moderate temperature bands. "
+            "If heat rises and humidity drops together, increase monitoring and irrigation checks."
+        )
+    elif any(k in q for k in ["trend", "predict", "forecast", "future", "ai"]):
+        if prediction and not prediction.get("error"):
+            answer = (
+                f"Prediction summary: {prediction.get('insight_summary', prediction.get('recommendation_text', 'No summary available'))} "
+                f"Confidence: {prediction.get('confidence', 0)}%. Next review: {prediction.get('next_review_minutes', 60)} minutes."
+            )
+        else:
+            answer = "I need a bit more historical data before giving a reliable prediction summary."
+    elif any(k in q for k in ["fertiliz", "nutrient", "soil health"]):
+        answer = (
+            "Based on this system, prioritize moisture stability first. For fertilizer planning, apply during moderate moisture "
+            "conditions and avoid peak heat periods to reduce stress on plants."
+        )
+    else:
+        answer = (
+            "I can help with irrigation timing, trend interpretation, and crop-condition guidance from your live data. "
+            + _general_status_text()
+        )
+
+    suggested_questions = [
+        "What is the average temperature right now?",
+        "Should I irrigate right now?",
+        "Explain today's AI prediction in simple words",
+        "What do current sensor values mean for crop health?",
+        "How can I improve yield with this data?"
+    ]
+
+    return {
+        "question": question,
+        "answer": answer,
+        "context": {
+            "temperature": round(temp, 1),
+            "humidity": round(hum, 1),
+            "light": round(light, 1),
+            "soil_moisture": round(moisture, 1),
+        },
+        "prediction": {
+            "risk_level": prediction.get("risk_level") if prediction else None,
+            "risk_score": prediction.get("risk_score") if prediction else None,
+            "recommended_action": prediction.get("recommended_action") if prediction else None,
+        },
+        "suggested_questions": suggested_questions,
+        "timestamp": datetime.now(bst_tz).isoformat(),
+    }
 
 @app.get("/api/system/status")
 async def get_system_status():
@@ -473,6 +732,23 @@ async def api_cleanup_execute(days: int = Query(30, ge=1)):
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
+@app.delete("/api/history/cleanup-hours")
+async def api_cleanup_execute_hours(hours: int = Query(..., ge=1, le=24 * 365)):
+    """Executes cleanup for telemetry older than X hours."""
+    try:
+        result = await delete_old_telemetry_hours(hours)
+        return result
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.delete("/api/history/purge-all")
+async def api_purge_all_telemetry():
+    """Deletes all telemetry for emergency storage recovery."""
+    try:
+        return await purge_all_telemetry()
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
 @app.get("/api/history/settings")
 async def api_get_retention_settings():
     """Returns the current auto-cleanup configuration."""
@@ -497,6 +773,9 @@ async def api_post_retention_settings(data: RetentionSettings):
 
 async def auto_cleanup_task():
     """Background task that runs once every 24 hours to clean up old telemetry."""
+    # Wait 60 seconds before first cleanup to avoid blocking startup
+    await asyncio.sleep(60)
+    
     while True:
         try:
             settings = await get_retention_settings()
@@ -552,10 +831,15 @@ async def handle_pump_cmd(sid, data):
 @sio.on('searchTimeRange')
 async def handle_search(sid, data):
     try:
-        time_start = float(data.get("timeStart", 0))
         time_end = float(data.get("timeEnd", 0))
+        limit = int(data.get("limit", 100))
+        offset = int(data.get("offset", 0))
 
-        records = await get_sensor_data_within_range(time_start, time_end)
+        records = await get_sensor_data_within_range(
+            time_end_hrs=time_end,
+            limit=limit,
+            offset=offset,
+        )
 
         formatted = []
         for r in records:

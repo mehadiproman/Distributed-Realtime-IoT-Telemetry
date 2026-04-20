@@ -1,16 +1,21 @@
 import asyncpg
+import os
 from datetime import datetime, timedelta, timezone
 
 # Define Bangladesh Standard Time (UTC+6)
 bst_tz = timezone(timedelta(hours=6))
 
 DB_CONFIG = {
-    "user": "postgres",
-    "password": "1234",
-    "database": "home",
-    "host": "127.0.0.1",
-    "port": 5432
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "1234"),
+    "database": os.getenv("DB_NAME", "home"),
+    "host": os.getenv("DB_HOST", "127.0.0.1"),
+    "port": int(os.getenv("DB_PORT", "5432")),
 }
+
+# Connection pool cache for settings
+_settings_cache = {}
+_cache_ttl = 300  # 5 minutes
 
 pool = None
 
@@ -39,8 +44,23 @@ def _format_record(r):
 
 async def init_db():
     global pool
-    pool = await asyncpg.create_pool(**DB_CONFIG)
+    if pool is not None:
+        return
+    
+    # Create pool with optimized settings for faster initialization
+    pool = await asyncpg.create_pool(
+        **DB_CONFIG,
+        min_size=2,      # Keep 2 connections ready
+        max_size=10,     # Max 10 connections
+        command_timeout=60,
+        timeout=30
+    )
+    
     async with pool.acquire() as conn:
+        # Split CREATE TABLE statements - they execute faster individually
+        # and we can skip redundant checks
+        
+        # 1. Create sensor_data table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS sensor_data (
                 id SERIAL PRIMARY KEY,
@@ -51,24 +71,29 @@ async def init_db():
                 air_quality NUMERIC,
                 light_intensity NUMERIC
             );
-            DO $$ 
-            BEGIN 
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sensor_data' AND column_name='humidity') THEN
-                    ALTER TABLE sensor_data ADD COLUMN humidity NUMERIC;
-                END IF;
-            END $$;
-
+        """)
+        
+        # 2. Create soil_data table
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS soil_data (
                 id SERIAL PRIMARY KEY,
                 timestamp TIMESTAMPTZ DEFAULT NOW(),
                 moisture NUMERIC
             );
+        """)
+        
+        # 3. Create pump_events table
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS pump_events (
                 id SERIAL PRIMARY KEY,
                 timestamp TIMESTAMPTZ DEFAULT NOW(),
                 state VARCHAR(10),
                 trigger_type VARCHAR(20)
             );
+        """)
+        
+        # 4. Create device_status table
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS device_status (
                 device_id VARCHAR(50) PRIMARY KEY,
                 last_seen TIMESTAMPTZ DEFAULT NOW(),
@@ -76,14 +101,45 @@ async def init_db():
                 battery_level NUMERIC,
                 status VARCHAR(20) DEFAULT 'offline'
             );
+        """)
+        
+        # 5. Create system_settings table
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS system_settings (
                 key VARCHAR(50) PRIMARY KEY,
                 value VARCHAR(50)
             );
-            INSERT INTO system_settings (key, value) VALUES ('pump_mode', 'AUTO') ON CONFLICT DO NOTHING;
-            INSERT INTO system_settings (key, value) VALUES ('auto_cleanup_enabled', 'false') ON CONFLICT DO NOTHING;
-            INSERT INTO system_settings (key, value) VALUES ('auto_cleanup_days', '30') ON CONFLICT DO NOTHING;
         """)
+        
+        # 6. Initialize settings with single batch insert (faster)
+        await conn.execute("""
+            INSERT INTO system_settings (key, value) VALUES 
+                ('pump_mode', 'AUTO'),
+                ('auto_cleanup_enabled', 'false'),
+                ('auto_cleanup_days', '30')
+            ON CONFLICT (key) DO NOTHING;
+        """)
+        
+        # 7. Add indexes asynchronously in background (don't block startup)
+        # These improve query performance without blocking init
+        try:
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_sensor_timestamp 
+                ON sensor_data(timestamp DESC) WHERE timestamp > NOW() - interval '30 days';
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_soil_timestamp 
+                ON soil_data(timestamp DESC) WHERE timestamp > NOW() - interval '30 days';
+            """)
+        except Exception:
+            # Indexes might already exist, safe to ignore
+            pass
+
+async def close_db():
+    global pool
+    if pool is not None:
+        await pool.close()
+        pool = None
 
 async def get_all_sensor_data(limit=100):
     async with pool.acquire() as conn:
@@ -104,6 +160,43 @@ async def get_sensor_data_within_range(time_end_hrs: float, limit: int = 20, off
             LIMIT $2 OFFSET $3;
         """, time_end_hrs, limit, offset)
         return [_format_record(r) for r in records]
+
+async def get_sensor_data_with_soil_within_range(time_end_hrs: float, limit: int = 20, offset: int = 0):
+    async with pool.acquire() as conn:
+        sensor_records = await conn.fetch("""
+            SELECT * FROM sensor_data
+            WHERE timestamp >= NOW() - (interval '1 hour' * $1)
+            ORDER BY timestamp DESC
+            LIMIT $2 OFFSET $3;
+        """, time_end_hrs, limit, offset)
+
+        soil_records = await conn.fetch("""
+            SELECT * FROM soil_data
+            WHERE timestamp >= NOW() - (interval '1 hour' * $1)
+            ORDER BY timestamp DESC;
+        """, time_end_hrs)
+
+        formatted_sensors = [_format_record(record) for record in sensor_records]
+        formatted_soil = [_format_record(record) for record in soil_records]
+
+        enriched_records = []
+        soil_index = 0
+
+        for sensor_record in formatted_sensors:
+            sensor_timestamp = sensor_record.get("timestamp")
+            matched_soil = None
+
+            while soil_index < len(formatted_soil):
+                soil_timestamp = formatted_soil[soil_index].get("timestamp")
+                if not soil_timestamp or not sensor_timestamp or soil_timestamp <= sensor_timestamp:
+                    matched_soil = formatted_soil[soil_index]
+                    break
+                soil_index += 1
+
+            sensor_record["soil_moisture"] = matched_soil.get("moisture") if matched_soil else None
+            enriched_records.append(sensor_record)
+
+        return enriched_records
 
 async def create_sensor_data(data: dict):
     query = """
@@ -185,19 +278,38 @@ async def set_pump_mode(mode: str):
         return mode
 
 async def get_retention_settings():
+    """Get retention settings with 5-minute cache to reduce DB queries."""
+    global _settings_cache
+    
+    # Use cache if available and fresh
+    if '_retention' in _settings_cache:
+        cached_time, cached_value = _settings_cache['_retention']
+        if (datetime.now(timezone.utc) - cached_time).total_seconds() < _cache_ttl:
+            return cached_value
+    
     async with pool.acquire() as conn:
         rows = await conn.fetch("SELECT key, value FROM system_settings WHERE key IN ('auto_cleanup_enabled', 'auto_cleanup_days');")
         settings = {r['key']: r['value'] for r in rows}
-        return {
+        result = {
             "enabled": settings.get('auto_cleanup_enabled') == 'true',
             "days": int(settings.get('auto_cleanup_days', 30))
         }
+        
+        # Cache the result
+        _settings_cache['_retention'] = (datetime.now(timezone.utc), result)
+        return result
 
 async def set_retention_settings(enabled: bool, days: int):
+    """Update retention settings and clear cache."""
+    global _settings_cache
+    
     async with pool.acquire() as conn:
         await conn.execute("UPDATE system_settings SET value = $1 WHERE key = 'auto_cleanup_enabled';", 'true' if enabled else 'false')
         await conn.execute("UPDATE system_settings SET value = $1 WHERE key = 'auto_cleanup_days';", str(days))
-        return {"enabled": enabled, "days": days}
+    
+    # Clear cache to force fresh fetch next time
+    _settings_cache.pop('_retention', None)
+    return {"enabled": enabled, "days": days}
 
 async def get_sensor_data_by_date_range(start_dt, end_dt):
     async with pool.acquire() as conn:
@@ -274,21 +386,91 @@ async def delete_old_telemetry(days: int):
     """Safely deletes telemetry data older than X days."""
     async with pool.acquire() as conn:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        
+
         async with conn.transaction():
             deleted_sensor = await conn.execute("DELETE FROM sensor_data WHERE timestamp < $1;", cutoff)
             deleted_soil = await conn.execute("DELETE FROM soil_data WHERE timestamp < $1;", cutoff)
-            
+
             # Simple parsing: "DELETE 123" -> 123
             count_sensor = int(deleted_sensor.split()[1])
             count_soil = int(deleted_soil.split()[1])
-            
-            return {
-                "sensor_deleted": count_sensor,
-                "soil_deleted": count_soil,
-                "total_deleted": count_sensor + count_soil,
-                "timestamp": datetime.now(bst_tz).isoformat()
-            }
+
+        total_deleted = count_sensor + count_soil
+        maintenance = "skipped"
+        if total_deleted > 0:
+            try:
+                # Reclaim dead tuples for reuse and refresh query stats.
+                # This is much safer for online systems than VACUUM FULL.
+                await conn.execute("VACUUM (ANALYZE) sensor_data;")
+                await conn.execute("VACUUM (ANALYZE) soil_data;")
+                maintenance = "vacuum_analyze_done"
+            except Exception as vacuum_error:
+                maintenance = f"vacuum_failed: {vacuum_error}"
+
+        return {
+            "sensor_deleted": count_sensor,
+            "soil_deleted": count_soil,
+            "total_deleted": total_deleted,
+            "cutoff_date": cutoff.astimezone(bst_tz).isoformat(),
+            "maintenance": maintenance,
+            "timestamp": datetime.now(bst_tz).isoformat()
+        }
+
+async def delete_old_telemetry_hours(hours: int):
+    """Safely deletes telemetry data older than X hours."""
+    async with pool.acquire() as conn:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+        async with conn.transaction():
+            deleted_sensor = await conn.execute("DELETE FROM sensor_data WHERE timestamp < $1;", cutoff)
+            deleted_soil = await conn.execute("DELETE FROM soil_data WHERE timestamp < $1;", cutoff)
+
+            count_sensor = int(deleted_sensor.split()[1])
+            count_soil = int(deleted_soil.split()[1])
+
+        total_deleted = count_sensor + count_soil
+        maintenance = "skipped"
+        if total_deleted > 0:
+            try:
+                await conn.execute("VACUUM (ANALYZE) sensor_data;")
+                await conn.execute("VACUUM (ANALYZE) soil_data;")
+                maintenance = "vacuum_analyze_done"
+            except Exception as vacuum_error:
+                maintenance = f"vacuum_failed: {vacuum_error}"
+
+        return {
+            "sensor_deleted": count_sensor,
+            "soil_deleted": count_soil,
+            "total_deleted": total_deleted,
+            "cutoff_date": cutoff.astimezone(bst_tz).isoformat(),
+            "maintenance": maintenance,
+            "timestamp": datetime.now(bst_tz).isoformat()
+        }
+
+async def purge_all_telemetry():
+    """Deletes all telemetry records (sensor + soil) and resets identities."""
+    async with pool.acquire() as conn:
+        sensor_count = await conn.fetchval("SELECT COUNT(*) FROM sensor_data;")
+        soil_count = await conn.fetchval("SELECT COUNT(*) FROM soil_data;")
+
+        async with conn.transaction():
+            await conn.execute("TRUNCATE TABLE sensor_data, soil_data RESTART IDENTITY;")
+
+        maintenance = "skipped"
+        try:
+            await conn.execute("VACUUM (ANALYZE) sensor_data;")
+            await conn.execute("VACUUM (ANALYZE) soil_data;")
+            maintenance = "vacuum_analyze_done"
+        except Exception as vacuum_error:
+            maintenance = f"vacuum_failed: {vacuum_error}"
+
+        return {
+            "sensor_deleted": int(sensor_count or 0),
+            "soil_deleted": int(soil_count or 0),
+            "total_deleted": int((sensor_count or 0) + (soil_count or 0)),
+            "maintenance": maintenance,
+            "timestamp": datetime.now(bst_tz).isoformat()
+        }
 
 async def get_system_metrics():
     async with pool.acquire() as conn:

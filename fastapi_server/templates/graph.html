@@ -76,6 +76,7 @@
             font-size: clamp(2rem, 5vw, 4rem);
             margin: 0 0 15px 0;
             background: linear-gradient(135deg, #fff 0%, #a644ff 50%, #64d2ff 100%);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -2px;
@@ -152,6 +153,7 @@
             font-size: clamp(1.5rem, 3.5vw, 3.2rem);
             margin: 0;
             background: var(--purple-gradient);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -1px;
@@ -659,8 +661,8 @@
 
 <div class="hero-section">
     <div class="hero-bg-grid"></div>
-    <h1 class="hero-title">Environmental Monitoring & Analytics Platform</h1>
-    <p class="hero-subtitle">Real-time telemetry, AI insights, and automated environmental control</p>
+    <h1 class="hero-title">Smart Environmental Monitoring & Automated Control Platform</h1>
+    <p class="hero-subtitle">An IoT-based real-time environmental monitoring & smart automation system for agriculture, farming, labs, & resource management.</p>
     
     <div class="hero-status-row">
         <div class="status-pill">
@@ -881,6 +883,71 @@
         </div>
     </div>
 
+    <!-- Unified AI Recommendation Module -->
+    <div style="margin-top: 40px; margin-bottom: 50px;">
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            <div class="glass-card" style="padding: 24px; border: 1px solid rgba(120, 80, 255, 0.28); border-radius: 20px; background: linear-gradient(140deg, rgba(35, 12, 60, 0.45) 0%, rgba(14, 23, 35, 0.88) 60%, rgba(12, 18, 28, 0.94) 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 14px;">
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width: 52px; height: 52px; background: rgba(170, 0, 255, 0.12); border-radius: 14px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(170, 0, 255, 0.24); flex-shrink:0;">
+                            <i class="fa fa-magic" style="color: #aa00ff; font-size: 1.45rem; text-shadow: 0 0 12px rgba(170, 0, 255, 0.5);"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 800; color: #f5f5f7; letter-spacing: 0.5px; display:flex; align-items:center; gap:8px;">
+                                AI Recommendation Engine
+                                <span style="font-size: 0.66rem; background: #32d74b; color: #04130a; padding: 2px 8px; border-radius: 20px; font-weight: 800;">LIVE ADVICE</span>
+                            </h4>
+                            <div style="font-size: 0.78rem; color: #8ea5ba;">One unified assistant for recommendations and guided Q&A</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right; min-width: 160px;">
+                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 4px;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #32d74b; box-shadow: 0 0 8px #32d74b;"></div>
+                            <span style="font-size: 0.74rem; font-weight: 700; color: #8b95a6; text-transform: uppercase;">System Health</span>
+                        </div>
+                        <div id="pred_model_health" style="font-size: 0.84rem; color: #f5f5f7; font-weight: 600;">Models Synchronized</div>
+                    </div>
+                </div>
+
+                <div id="pred_advice_text" style="color: #f5f5f7; font-size: 1.08rem; line-height: 1.55; font-style: italic; opacity: 0.94; margin-bottom: 8px;">
+                    "Waiting for enough telemetry data to generate intelligent automation insights..."
+                </div>
+                <div id="pred_advice_meta" style="color: #8d99a9; font-size: 0.84rem; margin-bottom: 10px;">
+                    Explainability: collecting baseline patterns...
+                </div>
+                <div id="pred_factor_chips" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;"></div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="display:flex; align-items:center; gap:8px; color:#f5f5f7; font-size:1rem; font-weight:700;">
+                            <i class="fa fa-comments" style="color:#64d2ff;"></i>
+                            Farm AI Helper
+                        </div>
+                        <span style="font-size: 0.76rem; color: #7f94a8;">Ask about irrigation, crop condition, or live telemetry</span>
+                    </div>
+
+                    <div id="mini_chat_messages" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; min-height: 118px; padding: 13px; color: #cfd3dc; line-height: 1.5;">
+                        Ask a question or tap one suggestion below to get an instant farming recommendation based on your data.
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;" id="mini_chat_suggestions">
+                        <button type="button" class="mini-ask-btn" onclick="askMiniAssistant('What is the average temperature right now?')" style="background: rgba(255, 159, 10, 0.12); color: #ffb84d; border: 1px solid rgba(255, 159, 10, 0.3); border-radius: 999px; padding: 7px 12px; font-size: 0.78rem; cursor: pointer;">Average temperature</button>
+                        <button type="button" class="mini-ask-btn" onclick="askMiniAssistant('Should I irrigate right now?')" style="background: rgba(50, 215, 75, 0.12); color: #32d74b; border: 1px solid rgba(50, 215, 75, 0.3); border-radius: 999px; padding: 7px 12px; font-size: 0.78rem; cursor: pointer;">Should I irrigate right now?</button>
+                        <button type="button" class="mini-ask-btn" onclick="askMiniAssistant('Explain today AI prediction in simple words')" style="background: rgba(100, 210, 255, 0.12); color: #64d2ff; border: 1px solid rgba(100, 210, 255, 0.3); border-radius: 999px; padding: 7px 12px; font-size: 0.78rem; cursor: pointer;">Explain today AI prediction</button>
+                        <button type="button" class="mini-ask-btn" onclick="askMiniAssistant('What do current sensor values mean for crop health?')" style="background: rgba(166, 68, 255, 0.12); color: #c792ff; border: 1px solid rgba(166, 68, 255, 0.3); border-radius: 999px; padding: 7px 12px; font-size: 0.78rem; cursor: pointer;">Crop health from sensors</button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 10px;">
+                        <input id="mini_chat_input" type="text" placeholder="Type your farming question..." style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #f5f5f7; padding: 11px 12px; outline: none; font-size: 0.9rem;">
+                        <button id="mini_chat_send" type="button" onclick="submitMiniAssistantQuestion()" style="background: linear-gradient(135deg, #0a84ff 0%, #64d2ff 100%); color: #021624; border: none; border-radius: 10px; padding: 0 16px; font-weight: 700; cursor: pointer;">Ask</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
      <!-- New Bottom Dual Section: Connected Devices | Export Reports -->
     <div class="bottom-dual-row">
         <style>
@@ -947,100 +1014,6 @@
         </div>
     </div>
 
-    <!-- Smart Predictions Master Module -->
-    <div class="glass-card" style="margin-top: 60px; margin-bottom: 50px; padding: 40px; border: 1px solid rgba(166, 68, 255, 0.3); box-shadow: 0 0 40px rgba(166, 68, 255, 0.15); border-radius: 32px; background: linear-gradient(135deg, rgba(13, 13, 18, 0.8) 0%, rgba(26, 26, 46, 0.9) 100%); position: relative; overflow: hidden;">
-        
-        <!-- Decoration Glows -->
-        <div style="position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(166, 68, 255, 0.1) 0%, transparent 70%); pointer-events: none;"></div>
-        <div style="position: absolute; bottom: -100px; left: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(100, 210, 255, 0.1) 0%, transparent 70%); pointer-events: none;"></div>
-
-        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 40px;">
-            <div style="height: 1px; flex-grow: 1; background: linear-gradient(90deg, transparent, rgba(166, 68, 255, 0.5));"></div>
-            <div style="text-align: center; display: flex; align-items: center; gap: 12px; padding: 0 20px;">
-                <i class="fa fa-microchip" style="color: #64d2ff; font-size: 1.8rem; text-shadow: 0 0 15px rgba(100, 210, 255, 0.5);"></i>
-                <h2 style="margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: 1px; color: #f5f5f7; text-transform: none;">AI Smart Predictions</h2>
-            </div>
-            <div style="height: 1px; flex-grow: 1; background: linear-gradient(90deg, rgba(166, 68, 255, 0.5), transparent);"></div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-            
-            <!-- Irrigation Forecast Card -->
-            <div class="glass-card" id="pred_watering_card" style="padding: 24px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s ease;" onmouseover="this.style.borderColor='rgba(41, 121, 255, 0.4)'; this.style.transform='translateY(-5px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.transform='translateY(0)'">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 1.5px;">Irrigation Forecast</span>
-                    <div id="pred_water_badge" style="background: rgba(41, 121, 255, 0.15); color: #2979ff; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(41, 121, 255, 0.2);">ANALYZING</div>
-                </div>
-                <div id="pred_water_text" style="font-size: 2rem; font-weight: 700; color: #f5f5f7; margin-bottom: 5px;">Scanning...</div>
-                <div id="pred_water_sub" style="font-size: 0.9rem; color: #86868b; margin-bottom: 25px;">Moisture cycle tracking</div>
-                
-                <div style="margin-top: auto;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem;">
-                        <span style="color: #86868b;">Confidence Score</span>
-                        <span id="pred_water_conf_val" style="color: #2979ff; font-weight: 700;">0%</span>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 10px; overflow: hidden;">
-                        <div id="pred_water_conf_bar" style="background: linear-gradient(90deg, #2979ff, #aa00ff); width: 0%; height: 100%; transition: width 1.5s cubic-bezier(0.19, 1, 0.22, 1);"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Temperature Trend Card -->
-            <div class="glass-card" style="padding: 24px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s ease;" onmouseover="this.style.borderColor='rgba(255, 69, 58, 0.4)'; this.style.transform='translateY(-5px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.transform='translateY(0)'">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 1.5px;">Thermal Projection</span>
-                    <div id="pred_temp_badge" style="background: rgba(255, 69, 58, 0.15); color: #ff453a; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(255, 69, 58, 0.2);">STABLE</div>
-                </div>
-                <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px;">
-                    <div id="pred_temp_val" style="font-size: 3rem; font-weight: 700; color: #f5f5f7;">--°C</div>
-                    <div id="pred_temp_direction" style="font-size: 1.5rem; color: #ff453a;"><i class="fa fa-minus"></i></div>
-                </div>
-                <div id="pred_temp_sub" style="font-size: 0.9rem; color: #86868b; margin-bottom: 10px;">Predicted value in 3 hours</div>
-                <div style="font-size: 0.8rem; color: rgba(255, 69, 58, 0.7); font-weight: 600;"><i class="fa fa-clock-o"></i> Next thermal shift: Detected</div>
-            </div>
-
-            <!-- Humidity Trend Card -->
-            <div class="glass-card" style="padding: 24px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s ease;" onmouseover="this.style.borderColor='rgba(100, 210, 255, 0.4)'; this.style.transform='translateY(-5px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.transform='translateY(0)'">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 1.5px;">Saturation Forecast</span>
-                    <div id="pred_hum_badge" style="background: rgba(100, 210, 255, 0.15); color: #64d2ff; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(100, 210, 255, 0.2);">STABLE</div>
-                </div>
-                <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px;">
-                    <div id="pred_hum_val" style="font-size: 3rem; font-weight: 700; color: #f5f5f7;">--%</div>
-                    <div id="pred_hum_direction" style="font-size: 1.5rem; color: #64d2ff;"><i class="fa fa-minus"></i></div>
-                </div>
-                <div id="pred_hum_sub" style="font-size: 0.9rem; color: #86868b; margin-bottom: 10px;">Atmospheric shift prediction</div>
-                <div style="font-size: 0.8rem; color: rgba(100, 210, 255, 0.7); font-weight: 600;"><i class="fa fa-info-circle"></i> Pattern recognition active</div>
-            </div>
-
-            <!-- Smart Advice (Wide Card) -->
-            <div class="glass-card" style="padding: 30px; background: linear-gradient(135deg, rgba(170, 0, 255, 0.1) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid rgba(170, 0, 255, 0.2); grid-column: 1 / -1;">
-                <div style="display: flex; gap: 20px; align-items: flex-start;">
-                    <div style="width: 60px; height: 60px; background: rgba(170, 0, 255, 0.1); border-radius: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(170, 0, 255, 0.2);">
-                        <i class="fa fa-magic" style="color: #aa00ff; font-size: 1.8rem; text-shadow: 0 0 10px rgba(170, 0, 255, 0.5);"></i>
-                    </div>
-                    <div style="flex-grow: 1;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 1.1rem; font-weight: 700; color: #f5f5f7; display: flex; align-items: center; gap: 10px;">
-                            AI Recommendation Engine
-                            <span style="font-size: 0.7rem; background: #32d74b; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: 800;">LIVE ADVICE</span>
-                        </h4>
-                        <div id="pred_advice_text" style="color: #f5f5f7; font-size: 1.1rem; line-height: 1.6; font-style: italic; opacity: 0.9;">
-                            "Waiting for enough telemetry data to generate intelligent automation insights..."
-                        </div>
-                    </div>
-                    <div style="text-align: right; min-width: 150px;">
-                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 5px;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #32d74b; box-shadow: 0 0 8px #32d74b;"></div>
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #86868b; text-transform: uppercase;">System Health</span>
-                        </div>
-                        <div style="font-size: 0.85rem; color: #f5f5f7; font-weight: 600;">Models Synchronized</div>
-                    </div>
-                </div>
-            </div>
-            
-        </div>
-    </div>
-
 
 
     <div class="section-title">Telemetry Analytics</div>
@@ -1081,7 +1054,7 @@
             <p style="color: #86868b; margin: 0; font-size: 1.1rem;">Real-time infrastructure health and connectivity monitoring</p>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 40px;">
             <!-- API Status -->
             <div class="status-card" style="background: rgba(255,255,255,0.03); padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 32px; transition: all 0.3s ease;">
                 <div id="status_api_icon" style="width: 60px; height: 60px; border-radius: 16px; background: rgba(50, 215, 75, 0.1); border: 1px solid rgba(50, 215, 75, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -1119,44 +1092,44 @@
             </div>
 
             <!-- Device Nodes -->
-            <div class="status-card" style="background: rgba(255,255,255,0.03); padding: 35px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 20px; transition: all 0.3s ease;">
-                <div style="display: flex; align-items: center; gap: 32px;">
-                    <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(100, 210, 255, 0.1); border: 1px solid rgba(100, 210, 255, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <i class="fa fa-wifi" style="color: #64d2ff; font-size: 1.8rem;"></i>
+            <div class="status-card" style="background: rgba(255,255,255,0.03); padding: 28px 30px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 158px; transition: all 0.3s ease;">
+                <div style="display: flex; align-items: center; gap: 22px;">
+                    <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(100, 210, 255, 0.1); border: 1px solid rgba(100, 210, 255, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fa fa-wifi" style="color: #64d2ff; font-size: 1.45rem;"></i>
                     </div>
                     <div>
-                        <div style="font-size: 0.8rem; font-weight: 800; color: #86868b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Device Nodes</div>
-                        <div id="status_devices_text" style="font-size: 1.5rem; font-weight: 700; color: #f5f5f7; margin-bottom: 6px; line-height: 1.2;">0 Active</div>
-                        <div id="status_devices_sub" style="font-size: 0.95rem; color: #86868b; font-weight: 600; letter-spacing: 0.5px;">No devices found</div>
+                        <div style="font-size: 0.75rem; font-weight: 800; color: #86868b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Device Nodes</div>
+                        <div id="status_devices_text" style="font-size: 1.35rem; font-weight: 700; color: #f5f5f7; margin-bottom: 4px; line-height: 1.15;">0 Active</div>
+                        <div id="status_devices_sub" style="font-size: 0.86rem; color: #86868b; font-weight: 600; letter-spacing: 0.4px;">No devices found</div>
                     </div>
                 </div>
                 <!-- Active Devices List -->
-                <div id="active_devices_list" style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div id="active_devices_list" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); min-height: 42px; align-content: flex-start;">
                     <!-- Pills added by JS -->
                 </div>
             </div>
 
             <!-- Last Telemetry -->
-            <div class="status-card" style="background: linear-gradient(135deg, rgba(166, 68, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%); padding: 35px; border-radius: 24px; border: 1px solid rgba(166, 68, 255, 0.2); display: flex; align-items: center; gap: 32px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(166, 68, 255, 0.05);">
-                <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(166, 68, 255, 0.15); border: 1px solid rgba(166, 68, 255, 0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i class="fa fa-clock-o" style="color: #a644ff; font-size: 1.8rem;"></i>
+            <div class="status-card" style="background: linear-gradient(135deg, rgba(166, 68, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%); padding: 28px 30px; border-radius: 22px; border: 1px solid rgba(166, 68, 255, 0.2); display: flex; align-items: center; gap: 22px; min-height: 158px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(166, 68, 255, 0.05);">
+                <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(166, 68, 255, 0.15); border: 1px solid rgba(166, 68, 255, 0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fa fa-clock-o" style="color: #a644ff; font-size: 1.45rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size: 0.8rem; font-weight: 800; color: #a644ff; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Last Telemetry</div>
-                    <div id="status_last_sync" style="font-size: 1.8rem; font-weight: 800; color: #f5f5f7; margin-bottom: 6px; line-height: 1; text-shadow: 0 0 10px rgba(166, 68, 255, 0.2);">--</div>
-                    <div style="font-size: 0.95rem; color: #86868b; font-weight: 600; letter-spacing: 0.5px;">Real-time sync</div>
+                    <div style="font-size: 0.75rem; font-weight: 800; color: #a644ff; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Last Telemetry</div>
+                    <div id="status_last_sync" style="font-size: 1.4rem; font-weight: 800; color: #f5f5f7; margin-bottom: 4px; line-height: 1; text-shadow: 0 0 10px rgba(166, 68, 255, 0.2);">--</div>
+                    <div style="font-size: 0.86rem; color: #86868b; font-weight: 600; letter-spacing: 0.4px;">Real-time sync</div>
                 </div>
             </div>
 
             <!-- Records Today -->
-            <div class="status-card" style="background: linear-gradient(135deg, rgba(50, 215, 75, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%); padding: 35px; border-radius: 24px; border: 1px solid rgba(50, 215, 75, 0.2); display: flex; align-items: center; gap: 32px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(50, 215, 75, 0.05);">
-                <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(50, 215, 75, 0.15); border: 1px solid rgba(50, 215, 75, 0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i class="fa fa-area-chart" style="color: #32d74b; font-size: 1.8rem;"></i>
+            <div class="status-card" style="background: linear-gradient(135deg, rgba(50, 215, 75, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%); padding: 28px 30px; border-radius: 22px; border: 1px solid rgba(50, 215, 75, 0.2); display: flex; align-items: center; gap: 22px; min-height: 158px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(50, 215, 75, 0.05);">
+                <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(50, 215, 75, 0.15); border: 1px solid rgba(50, 215, 75, 0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fa fa-area-chart" style="color: #32d74b; font-size: 1.45rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size: 0.8rem; font-weight: 800; color: #32d74b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Records Today</div>
-                    <div id="status_records_count" style="font-size: 1.8rem; font-weight: 800; color: #f5f5f7; margin-bottom: 6px; line-height: 1; text-shadow: 0 0 10px rgba(50, 215, 75, 0.2);">0</div>
-                    <div style="font-size: 0.95rem; color: #86868b; font-weight: 600; letter-spacing: 0.5px;">Recent 24h window</div>
+                    <div style="font-size: 0.75rem; font-weight: 800; color: #32d74b; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Records Today</div>
+                    <div id="status_records_count" style="font-size: 1.4rem; font-weight: 800; color: #f5f5f7; margin-bottom: 4px; line-height: 1; text-shadow: 0 0 10px rgba(50, 215, 75, 0.2);">0</div>
+                    <div style="font-size: 0.86rem; color: #86868b; font-weight: 600; letter-spacing: 0.4px;">Recent 24h window</div>
                 </div>
             </div>
         </div>
@@ -1682,6 +1655,82 @@
         }
     }
 
+    async function askMiniAssistant(question) {
+        const msgEl = document.getElementById('mini_chat_messages');
+        const sendBtn = document.getElementById('mini_chat_send');
+        if (!msgEl || !sendBtn) return;
+
+        msgEl.innerHTML = `<div style="color:#64d2ff;"><i class="fa fa-circle-o-notch fa-spin"></i> Thinking...</div>`;
+        sendBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/assistant/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Assistant unavailable');
+            }
+
+            const ctx = data.context || {};
+            msgEl.innerHTML = `
+                <div style="color:#86868b; font-size:0.8rem; margin-bottom:6px;"><b>You:</b> ${data.question}</div>
+                <div style="color:#f5f5f7; font-size:0.92rem;"><b>Farm AI:</b> ${data.answer}</div>
+                <div style="margin-top:10px; color:#9aa3b2; font-size:0.78rem;">
+                    Context -> Soil: ${ctx.soil_moisture ?? '--'}%, Temp: ${ctx.temperature ?? '--'} C, Hum: ${ctx.humidity ?? '--'}%, Light: ${ctx.light ?? '--'} lux
+                </div>
+            `;
+
+            const suggestionWrap = document.getElementById('mini_chat_suggestions');
+            if (suggestionWrap && Array.isArray(data.suggested_questions) && data.suggested_questions.length > 0) {
+                suggestionWrap.innerHTML = '';
+                data.suggested_questions.slice(0, 4).forEach((q, idx) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'mini-ask-btn';
+                    btn.innerText = q;
+                    btn.onclick = () => askMiniAssistant(q);
+                    btn.style.borderRadius = '999px';
+                    btn.style.padding = '7px 12px';
+                    btn.style.fontSize = '0.78rem';
+                    btn.style.cursor = 'pointer';
+                    btn.style.border = '1px solid rgba(100,210,255,0.26)';
+                    btn.style.background = idx % 2 === 0 ? 'rgba(100, 210, 255, 0.12)' : 'rgba(166, 68, 255, 0.12)';
+                    btn.style.color = idx % 2 === 0 ? '#64d2ff' : '#c792ff';
+                    suggestionWrap.appendChild(btn);
+                });
+            }
+        } catch (error) {
+            msgEl.innerHTML = `<div style="color:#ff453a;"><i class="fa fa-exclamation-triangle"></i> ${error.message}</div>`;
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    function submitMiniAssistantQuestion() {
+        const input = document.getElementById('mini_chat_input');
+        if (!input) return;
+        const q = (input.value || '').trim();
+        if (!q) {
+            input.focus();
+            return;
+        }
+        askMiniAssistant(q);
+    }
+
+    const miniChatInput = document.getElementById('mini_chat_input');
+    if (miniChatInput) {
+        miniChatInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitMiniAssistantQuestion();
+            }
+        });
+    }
+
     async function updatePredictions() {
         try {
             const response = await fetch('/api/predict/summary');
@@ -1693,94 +1742,66 @@
                 return;
             }
 
-            // Update Watering Prediction
-            const waterText = document.getElementById('pred_water_text');
-            const waterBadge = document.getElementById('pred_water_badge');
-            const waterSub = document.getElementById('pred_water_sub');
-            const waterConfBar = document.getElementById('pred_water_conf_bar');
-            const waterConfVal = document.getElementById('pred_water_conf_val');
-
-            if (data.watering_needed) {
-                waterText.innerText = "Action Required";
-                waterBadge.innerText = "URGENT";
-                waterBadge.style.background = "rgba(255, 69, 58, 0.2)";
-                waterBadge.style.color = "#ff453a";
-                waterSub.innerText = "Irrigate within 1 hour";
-                waterSub.style.color = "#ff453a";
-            } else {
-                waterText.innerText = "No Action Needed";
-                waterBadge.innerText = "OPTIMAL";
-                waterBadge.style.background = "rgba(50, 215, 75, 0.2)";
-                waterBadge.style.color = "#32d74b";
-                waterSub.innerText = data.recommended_in_hours > 0 ? `Water likely needed in ${data.recommended_in_hours}h` : "Sensor levels are perfect";
-                waterSub.style.color = "#86868b";
-            }
-            waterConfBar.style.width = `${data.confidence}%`;
-            waterConfVal.innerText = `${data.confidence}%`;
-
-            // Update Temp Prediction
-            const tempVal = document.getElementById('pred_temp_val');
-            const tempBadge = document.getElementById('pred_temp_badge');
-            const tempDir = document.getElementById('pred_temp_direction');
-            const tempSub = document.getElementById('pred_temp_sub');
-
-            tempVal.innerText = `${data.temp_pred}°C`;
-            tempBadge.innerText = data.temp_trend.toUpperCase();
-            tempSub.innerText = `${data.temp_trend} from current state`;
-            
-            if (data.temp_trend === "Rising") {
-                tempDir.innerHTML = '<i class="fa fa-caret-up"></i>';
-                tempDir.style.color = "#ff453a";
-                tempBadge.style.background = "rgba(255, 69, 58, 0.2)";
-                tempBadge.style.color = "#ff453a";
-            } else if (data.temp_trend === "Falling") {
-                tempDir.innerHTML = '<i class="fa fa-caret-down"></i>';
-                tempDir.style.color = "#0a84ff";
-                tempBadge.style.background = "rgba(10, 132, 255, 0.2)";
-                tempBadge.style.color = "#0a84ff";
-            } else {
-                tempDir.innerHTML = '<i class="fa fa-minus"></i>';
-                tempDir.style.color = "#86868b";
-                tempBadge.style.background = "rgba(134, 134, 139, 0.2)";
-                tempBadge.style.color = "#86868b";
-            }
-
-            // Update Humidity Prediction
-            const humVal = document.getElementById('pred_hum_val');
-            const humBadge = document.getElementById('pred_hum_badge');
-            const humDir = document.getElementById('pred_hum_direction');
-            const humSub = document.getElementById('pred_hum_sub');
-
-            humVal.innerText = `${data.hum_pred}%`;
-            humBadge.innerText = data.hum_trend.toUpperCase();
-            humSub.innerText = `${data.hum_trend} levels expected`;
-
-            if (data.hum_trend === "Rising") {
-                humDir.innerHTML = '<i class="fa fa-caret-up"></i>';
-                humDir.style.color = "#64d2ff";
-                humBadge.style.background = "rgba(100, 210, 255, 0.2)";
-                humBadge.style.color = "#64d2ff";
-            } else if (data.hum_trend === "Falling") {
-                humDir.innerHTML = '<i class="fa fa-caret-down"></i>';
-                humDir.style.color = "#ff9f0a";
-                humDir.style.color = "#ff9f0a";
-                humBadge.style.background = "rgba(255, 159, 10, 0.2)";
-                humBadge.style.color = "#ff9f0a";
-            } else {
-                humDir.innerHTML = '<i class="fa fa-minus"></i>';
-                humDir.style.color = "#86868b";
-                humBadge.style.background = "rgba(134, 134, 139, 0.2)";
-                humBadge.style.color = "#86868b";
-            }
-
             // Advice
             const adviceText = document.getElementById('pred_advice_text');
-            if (data.watering_needed) {
+            const adviceMeta = document.getElementById('pred_advice_meta');
+            const factorChips = document.getElementById('pred_factor_chips');
+            const modelHealth = document.getElementById('pred_model_health');
+            if (data.recommendation_text) {
+                adviceText.innerText = `"${data.recommendation_text}"`;
+            } else if (data.watering_needed) {
                 adviceText.innerText = `"Soil moisture is dropping faster than predicted. Preparing the pump for an automated cycle in the next hour is recommended."`;
             } else if (data.temp_trend === "Rising" && data.hum_trend === "Falling") {
                 adviceText.innerText = `"Hot and dry conditions ahead. The system will monitor transpiration rates closely."`;
             } else {
                 adviceText.innerText = `"Environmental conditions are stable. No abnormal fluctuations predicted for the current cycle."`;
+            }
+
+            if (data.insight_summary) {
+                adviceText.innerText = `"${data.insight_summary}"`;
+            }
+
+            if (adviceMeta) {
+                const confidenceBand = data.confidence_band || 'Moderate';
+                const wateringProb = Number.isFinite(data.watering_probability) ? `${data.watering_probability}%` : '--';
+                const nextReview = Number.isFinite(data.next_review_minutes) ? `${data.next_review_minutes} min` : '--';
+                adviceMeta.innerText = `Need probability: ${wateringProb} | Confidence: ${confidenceBand} | Next review: ${nextReview}`;
+            }
+
+            if (modelHealth) {
+                const version = data.model_version || 'unknown';
+                modelHealth.innerText = `Model ${version}`;
+            }
+
+            if (factorChips) {
+                factorChips.innerHTML = '';
+                const factors = Array.isArray(data.insight_factors) ? data.insight_factors : [];
+                factors.slice(0, 4).forEach((factor) => {
+                    const impact = (factor.impact || 'low').toLowerCase();
+                    const chip = document.createElement('span');
+                    let chipColor = '#64d2ff';
+                    let chipBg = 'rgba(100,210,255,0.12)';
+
+                    if (impact === 'high') {
+                        chipColor = '#ff453a';
+                        chipBg = 'rgba(255,69,58,0.14)';
+                    } else if (impact === 'medium') {
+                        chipColor = '#ffd60a';
+                        chipBg = 'rgba(255,214,10,0.14)';
+                    }
+
+                    chip.style.padding = '5px 10px';
+                    chip.style.borderRadius = '999px';
+                    chip.style.fontSize = '0.75rem';
+                    chip.style.fontWeight = '700';
+                    chip.style.letterSpacing = '0.3px';
+                    chip.style.color = chipColor;
+                    chip.style.background = chipBg;
+                    chip.style.border = `1px solid ${chipBg}`;
+                    chip.title = factor.detail || '';
+                    chip.innerText = `${factor.label || 'Signal'}: ${impact.toUpperCase()}`;
+                    factorChips.appendChild(chip);
+                });
             }
 
         } catch (error) {

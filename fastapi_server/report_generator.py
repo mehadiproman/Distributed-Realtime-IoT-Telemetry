@@ -145,8 +145,82 @@ def _counts(sensor_n, soil_n):
     return t
 
 
+def _ai_section(prediction_summary):
+    s = _styles()
+    if not prediction_summary or prediction_summary.get("error"):
+        return [
+            Paragraph("AI Prediction Report", s['RSec']),
+            Paragraph(
+                "Prediction data is not available for this report period.",
+                ParagraphStyle('ai_na', fontSize=9, textColor=TEXT_SEC, leading=12)
+            ),
+        ]
+
+    label_style = ParagraphStyle('ai_label', fontSize=8, textColor=TEXT_MUTED, leading=10)
+    value_style = ParagraphStyle('ai_value', fontSize=10, textColor=TEXT_DARK, leading=12)
+    advice_style = ParagraphStyle('ai_advice', fontSize=9, textColor=TEXT_DARK, leading=13)
+
+    watering = "Yes" if prediction_summary.get("watering_needed") else "No"
+    risk_score = prediction_summary.get("risk_score", "—")
+    risk_level = prediction_summary.get("risk_level", "—")
+    action = prediction_summary.get("recommended_action", "—")
+    priority = prediction_summary.get("recommendation_priority", "—")
+    confidence = prediction_summary.get("confidence", "—")
+    temp_trend = prediction_summary.get("temp_trend", "—")
+    hum_trend = prediction_summary.get("hum_trend", "—")
+    recommendation_text = prediction_summary.get("recommendation_text", "No recommendation available.")
+
+    ai_rows = [
+        [Paragraph('<b>Watering Needed</b>', label_style), Paragraph(str(watering), value_style),
+         Paragraph('<b>Risk Score</b>', label_style), Paragraph(str(risk_score), value_style)],
+        [Paragraph('<b>Risk Level</b>', label_style), Paragraph(str(risk_level), value_style),
+         Paragraph('<b>Confidence</b>', label_style), Paragraph(f"{confidence}%" if confidence != "—" else "—", value_style)],
+        [Paragraph('<b>Temperature Trend</b>', label_style), Paragraph(str(temp_trend), value_style),
+         Paragraph('<b>Humidity Trend</b>', label_style), Paragraph(str(hum_trend), value_style)],
+    ]
+
+    ai_table = Table(ai_rows, colWidths=[92, 120, 92, 120], rowHeights=[18, 18, 18])
+    ai_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.white),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOX', (0,0), (-1,-1), 0.6, BORDER),
+        ('INNERGRID', (0,0), (-1,-1), 0.4, BORDER),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+    ]))
+
+    recommendation_label = ParagraphStyle('ai_rec_label', fontSize=8, textColor=TEXT_MUTED, leading=10)
+    recommendation_value = ParagraphStyle('ai_rec_value', fontSize=10, textColor=TEXT_DARK, leading=13)
+    recommendation_box = Table([
+        [Paragraph('<b>Recommended Action</b>', recommendation_label), Paragraph(str(action), recommendation_value)],
+        [Paragraph('<b>Priority</b>', recommendation_label), Paragraph(str(priority), recommendation_value)],
+    ], colWidths=[120, 306])
+    recommendation_box.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.white),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOX', (0,0), (-1,-1), 0.6, BORDER),
+        ('INNERGRID', (0,0), (-1,-1), 0.4, BORDER),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+    ]))
+
+    return [
+        Paragraph("AI Prediction Report", s['RSec']),
+        ai_table,
+        Spacer(1, 6),
+        recommendation_box,
+        Spacer(1, 5),
+        Paragraph(f"<b>Recommendation:</b> {recommendation_text}", advice_style),
+    ]
+
+
 def generate_pdf_report(sensor_data: list, soil_data: list,
-                        start_str: str, end_str: str) -> bytes:
+                        start_str: str, end_str: str,
+                        prediction_summary: dict | None = None) -> bytes:
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
         topMargin=15*mm, bottomMargin=12*mm,
@@ -170,14 +244,12 @@ def generate_pdf_report(sensor_data: list, soil_data: list,
     # ── STATS ──
     temp = _stats(sensor_data, 'temperature')
     hum = _stats(sensor_data, 'pressure')
-    aqi = _stats(sensor_data, 'air_quality')
     light = _stats(sensor_data, 'light_intensity')
     soil = _stats(soil_data, 'moisture')
 
     sl = [
         ("Temperature", "°C", BRAND_RED, temp),
         ("Humidity", "%", BRAND_BLUE, hum),
-        ("Air Quality", "AQI", BRAND_GREEN, aqi),
         ("Light", "lux", BRAND_YELLOW, light),
         ("Soil Moisture", "%", BRAND_CYAN, soil),
     ]
@@ -191,6 +263,10 @@ def generate_pdf_report(sensor_data: list, soil_data: list,
     el.append(Paragraph("Summary Statistics", st['RSec']))
     el.append(_stat_table(sl))
     el.append(Spacer(1, 12))
+
+    # ── AI PREDICTION ──
+    el.extend(_ai_section(prediction_summary))
+    el.append(Spacer(1, 10))
 
     # ── COUNTS ──
     el.append(HRFlowable(width="100%", thickness=0.4, color=DIVIDER, spaceBefore=4, spaceAfter=6))

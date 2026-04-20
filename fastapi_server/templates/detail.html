@@ -224,34 +224,58 @@
 
         <!-- Retention Controls -->
         <div style="background: rgba(166, 68, 255, 0.03); padding: 25px; border-radius: 20px; border: 1px solid rgba(166, 68, 255, 0.1); display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <label style="display: block; font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Select Retention Policy</label>
-                <select id="retention_days" style="width: 100%; background: #000; border: 1px solid var(--glass-border); color: #fff; padding: 12px; border-radius: 12px; outline: none; cursor: pointer;">
-                    <option value="7">Keep last 7 Days (Strict)</option>
-                    <option value="30" selected>Keep last 30 Days (Recommended)</option>
-                    <option value="90">Keep last 90 Days</option>
-                    <option value="365">Keep last Year</option>
-                </select>
-            </div>
-            <div style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 12px; margin-bottom: 5px;">
-                <label class="switch">
-                    <input type="checkbox" id="auto_cleanup_toggle" onchange="saveRetentionSettings()">
-                    <span class="slider round"></span>
-                </label>
-                <div>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: #f5f5f7;">Auto-Cleanup Daily</div>
-                    <div style="font-size: 0.7rem; color: #86868b;">Run policy automatically</div>
+            <div style="width: 100%; margin-bottom: 2px;">
+                <label style="display: block; font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Quick Delete Presets</label>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="quickDeletePresetHours(1, 'Past 1 Hour')" style="background: rgba(100,210,255,0.12); color: #64d2ff; border: 1px solid rgba(100,210,255,0.28); padding: 9px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">Delete Past 1h</button>
+                    <button onclick="quickDeletePresetHours(3, 'Past 3 Hours')" style="background: rgba(100,210,255,0.12); color: #64d2ff; border: 1px solid rgba(100,210,255,0.28); padding: 9px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">Delete Past 3h</button>
+                    <button onclick="quickDeletePresetDays(3, 'Past 3 Days')" style="background: rgba(255,159,10,0.12); color: #ffb84d; border: 1px solid rgba(255,159,10,0.28); padding: 9px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">Delete Past 3d</button>
+                    <button onclick="quickDeletePresetDays(7, 'Past 7 Days')" style="background: rgba(255,159,10,0.12); color: #ffb84d; border: 1px solid rgba(255,159,10,0.28); padding: 9px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">Delete Past 7d</button>
                 </div>
             </div>
-            <div style="display: flex; gap: 12px;">
-                <button onclick="previewCleanup()" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease;">
-                    Preview Cleanup
-                </button>
-                <button onclick="showCleanupModal()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s ease; box-shadow: 0 4px 15px rgba(255,69,58,0.2);">
-                    Delete Old Records
+
+            <div style="width: 100%; display: flex; justify-content: flex-start;">
+                <button onclick="toggleRetentionAdvanced()" style="background: rgba(255,255,255,0.05); color: #c8c8cc; border: 1px solid var(--glass-border); padding: 10px 14px; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                    <i class="fa fa-sliders"></i> Advanced Options
                 </button>
             </div>
+
+            <div id="retention_advanced_wrap" style="display: none; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 18px; margin-top: 2px;">
+                <div style="display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 220px;">
+                        <label style="display: block; font-size: 0.75rem; color: #86868b; text-transform: uppercase; font-weight: 700; margin-bottom: 10px;">Select Retention Policy</label>
+                        <select id="retention_days" onchange="handleRetentionPolicyChange()" style="width: 100%; background: #000; border: 1px solid var(--glass-border); color: #fff; padding: 12px; border-radius: 12px; outline: none; cursor: pointer;">
+                            <option value="7">Keep last 7 Days (Strict)</option>
+                            <option value="30" selected>Keep last 30 Days (Recommended)</option>
+                            <option value="90">Keep last 90 Days</option>
+                            <option value="365">Keep last Year</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 220px; display: flex; align-items: center; gap: 12px; margin-bottom: 5px;">
+                        <label class="switch">
+                            <input type="checkbox" id="auto_cleanup_toggle" onchange="saveRetentionSettings()">
+                            <span class="slider round"></span>
+                        </label>
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 600; color: #f5f5f7;">Auto-Cleanup Daily</div>
+                            <div style="font-size: 0.7rem; color: #86868b;">Run policy automatically</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button onclick="previewCleanup()" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease;">
+                            Preview Cleanup
+                        </button>
+                        <button onclick="quickDeleteByPolicy()" style="background: linear-gradient(135deg, #ff453a 0%, #ff6961 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s ease; box-shadow: 0 4px 15px rgba(255,69,58,0.2);">
+                            Delete by Policy
+                        </button>
+                        <button onclick="quickDeleteAllTelemetry()" style="background: rgba(255,69,58,0.16); color: #ff6f66; border: 1px solid rgba(255,69,58,0.35); padding: 12px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s ease;">
+                            Delete ALL Telemetry
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div id="cleanup_action_status" style="margin-top: 14px; font-size: 0.85rem; color: #86868b;"></div>
         <div id="cleanup_preview_area" style="margin-top: 20px; padding: 15px; border-radius: 12px; background: rgba(100, 210, 255, 0.05); border: 1px solid rgba(100, 210, 255, 0.1); display: none;">
             <p id="preview_text" style="margin:0; font-size: 0.9rem; color: #64d2ff;"></p>
         </div>
@@ -323,10 +347,10 @@
                     <option value="720">Past 30 Days</option>
                     <option value="87600" selected>All Records</option>
                 </select>
-                <button onclick="executeSearch()" style="background: var(--purple-gradient); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease; display:flex; align-items:center; gap:8px;">
+                <button id="apply_filter_btn" type="button" onclick="executeSearch(event)" style="background: var(--purple-gradient); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease; display:flex; align-items:center; gap:8px;">
                     <i class="fa fa-filter"></i> Apply Filter
                 </button>
-                <button onclick="window.location.reload()" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease;" title="Reset Dashboard">
+                <button type="button" onclick="window.location.reload()" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid var(--glass-border); padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s ease;" title="Reset Dashboard">
                     <i class="fa fa-refresh"></i>
                 </button>
             </div>
@@ -340,7 +364,7 @@
                         <th>Timestamp (Server)</th>
                         <th>Temperature (°C)</th>
                         <th>Humidity (%)</th>
-                        <th>Air Quality (AQI)</th>
+                        <th>Soil Moisture (%)</th>
                         <th>Light Config</th>
                     </tr>
                 </thead>
@@ -350,7 +374,7 @@
                         <td style="color: #64d2ff;">{{ item.timestamp.strftime('%b %d, %Y - %I:%M %p') if item.timestamp else 'N/A' }}</td>
                         <td>{{ "%.2f"|format(item.temperature|float) }}</td>
                         <td>{{ "%.2f"|format(item.pressure|float) }}</td>
-                        <td>{{ "%.2f"|format(item.air_quality|float) }}</td>
+                        <td>{{ "%.2f"|format(item.soil_moisture|float) if item.soil_moisture is not none else '--' }}</td>
                         <td>{{ "%.2f"|format(item.light_intensity|float) }}</td>
                     </tr>
                     {% endfor %}
@@ -360,7 +384,7 @@
         </div>
 
         <div id="load_more_container" style="display: flex; justify-content: center; margin-top: 40px;">
-            <button id="load_more_btn" onclick="loadMoreData()" style="background: rgba(166, 68, 255, 0.1); color: var(--accent-purple); border: 1px solid rgba(166, 68, 255, 0.3); padding: 14px 40px; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.3s ease; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
+            <button id="load_more_btn" type="button" onclick="loadMoreData()" style="background: rgba(166, 68, 255, 0.1); color: var(--accent-purple); border: 1px solid rgba(166, 68, 255, 0.3); padding: 14px 40px; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.3s ease; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
                 <i class="fa fa-history"></i> Load Older Records
             </button>
         </div>
@@ -375,10 +399,15 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    const socket = io();
     let currentLimit = 20;
     let currentOffset = 20;
     let isReachingEnd = false;
+    let currentFilterHours = 87600;
+
+    let socket = null;
+    if (typeof io === 'function') {
+        socket = io();
+    }
     
     function formatDate(isoString) {
         if(!isoString) return 'N/A';
@@ -387,24 +416,49 @@
                d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     }
 
-    async function executeSearch() {
+    async function fetchSensorRange(hours, limit, offset) {
+        const response = await fetch('/api/sensor/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeStart: 0, timeEnd: hours, limit, offset })
+        });
+
+        if (!response.ok) {
+            let detail = 'Unable to load historical records';
+            try {
+                const errorJson = await response.json();
+                detail = errorJson.detail || detail;
+            } catch (parseError) {
+                // Keep the generic error when the body is not JSON.
+            }
+            throw new Error(detail);
+        }
+
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function executeSearch(event) {
+        if (event) {
+            event.preventDefault();
+        }
+
         const hrs = parseInt(document.getElementById('time_filter').value);
         console.log("Searching with hrs:", hrs);
-        currentOffset = 0;
-        isReachingEnd = false;
+        currentFilterHours = hrs;
         
-        const btn = document.querySelector('button[onclick="executeSearch()"]');
+        const btn = document.getElementById('apply_filter_btn');
         const originalText = btn.innerHTML;
+        const loadMoreBtn = document.getElementById('load_more_btn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Filtering...';
+        if (loadMoreBtn) {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Loading...';
+        }
         
         try {
-            const response = await fetch('/api/sensor/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ timeStart: 0, timeEnd: hrs, limit: currentLimit, offset: 0 })
-            });
-            const db = await response.json();
+            const db = await fetchSensorRange(hrs, currentLimit, 0);
             console.log("Search result count:", db.length);
             
             const tbody = document.getElementById("tableBody");
@@ -413,17 +467,23 @@
             
             if (!db || db.length === 0) {
                 noDataMsg.style.display = 'block';
+                noDataMsg.textContent = 'No sensor records available yet.';
                 document.getElementById('load_more_container').style.display = 'none';
+                currentOffset = 0;
+                isReachingEnd = true;
                 return;
             }
             
             noDataMsg.style.display = 'none';
+            noDataMsg.textContent = 'No sensor records available yet.';
             document.getElementById('load_more_container').style.display = 'flex';
-            document.getElementById('load_more_btn').disabled = false;
-            document.getElementById('load_more_btn').style.background = 'rgba(166, 68, 255, 0.1)';
-            document.getElementById('load_more_btn').style.color = 'var(--accent-purple)';
-            document.getElementById('load_more_btn').style.cursor = 'pointer';
-            document.getElementById('load_more_btn').innerHTML = '<i class="fa fa-history"></i> Load Older Records';
+            if (loadMoreBtn) {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.style.background = 'rgba(166, 68, 255, 0.1)';
+                loadMoreBtn.style.color = 'var(--accent-purple)';
+                loadMoreBtn.style.cursor = 'pointer';
+                loadMoreBtn.innerHTML = '<i class="fa fa-history"></i> Load Older Records';
+            }
             
             appendRecordsToTable(db);
             currentOffset = db.length;
@@ -434,27 +494,30 @@
             }
         } catch (error) {
             console.error("Filter failed fetching data:", error);
+            const noDataMsg = document.getElementById("no_data_msg");
+            noDataMsg.style.display = 'block';
+            noDataMsg.textContent = error.message || 'Filter failed. Please try again.';
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
+            const loadMoreBtn = document.getElementById('load_more_btn');
+            if (loadMoreBtn && !isReachingEnd) {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.innerHTML = '<i class="fa fa-history"></i> Load Older Records';
+            }
         }
     }
 
     async function loadMoreData() {
         if (isReachingEnd) return;
         
-        const hrs = parseInt(document.getElementById('time_filter').value);
+        const hrs = currentFilterHours || parseInt(document.getElementById('time_filter').value);
         const btn = document.getElementById('load_more_btn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Loading...';
         
         try {
-            const response = await fetch('/api/sensor/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ timeStart: 0, timeEnd: hrs, limit: currentLimit, offset: currentOffset })
-            });
-            const db = await response.json();
+            const db = await fetchSensorRange(hrs, currentLimit, currentOffset);
             
             if (!db || db.length === 0) {
                 isReachingEnd = true;
@@ -494,8 +557,9 @@
             const tdPres = document.createElement('td');
             tdPres.textContent = parseFloat(item.pressure || 0).toFixed(2);
             
-            const tdAir = document.createElement('td');
-            tdAir.textContent = parseFloat(item.air_quality || item.airQuality || 0).toFixed(2);
+            const tdSoil = document.createElement('td');
+            const soilValue = item.soil_moisture ?? item.moisture ?? item.soilMoisture ?? null;
+            tdSoil.textContent = soilValue === null || soilValue === undefined ? '--' : parseFloat(soilValue || 0).toFixed(2);
             
             const tdLight = document.createElement('td');
             tdLight.textContent = parseFloat(item.light_intensity || item.lightIntensity || 0).toFixed(2);
@@ -503,7 +567,7 @@
             tr.appendChild(tdTime);
             tr.appendChild(tdTemp);
             tr.appendChild(tdPres);
-            tr.appendChild(tdAir);
+            tr.appendChild(tdSoil);
             tr.appendChild(tdLight);
             
             tbody.appendChild(tr);
@@ -522,6 +586,12 @@
 </script>
 
 <script>
+    function toggleRetentionAdvanced() {
+        const wrap = document.getElementById('retention_advanced_wrap');
+        if (!wrap) return;
+        wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+    }
+
     // ── Report Export Logic ──
     (function() {
         const today = new Date();
@@ -665,15 +735,156 @@
         try {
             const response = await fetch(`/api/history/cleanup?days=${days}`, { method: 'DELETE' });
             const data = await response.json();
-            
-            alert(`Succesfully cleaned up ${data.total_deleted.toLocaleString()} records! System is now optimized.`);
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Cleanup request failed');
+            }
+
+            if (!data.total_deleted) {
+                alert(`No records older than ${days} day(s) were found. Try a smaller retention window.`);
+            } else {
+                alert(`Successfully cleaned up ${data.total_deleted.toLocaleString()} records. Maintenance: ${data.maintenance || 'n/a'}.`);
+            }
             closeCleanupModal();
-            fetchHistoryStats();
-            executeSearch(); // Refresh table
+            await fetchHistoryStats();
+            await executeSearch(); // Refresh table
+            await previewCleanup();
         } catch (error) {
-            alert("Cleanup failed. Check logs.");
+            alert(`Cleanup failed: ${error.message}`);
         } finally {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
             btn.innerHTML = 'Confirm & Wipe Data';
+        }
+    }
+
+    async function quickDeleteByPolicy() {
+        const days = document.getElementById('retention_days').value;
+        const status = document.getElementById('cleanup_action_status');
+        const ok = window.confirm(`Delete telemetry older than ${days} day(s)? This cannot be undone.`);
+        if (!ok) return;
+
+        try {
+            if (status) {
+                status.style.color = '#64d2ff';
+                status.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Running cleanup by retention policy...';
+            }
+            const response = await fetch(`/api/history/cleanup?days=${days}`, { method: 'DELETE' });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Cleanup request failed');
+            }
+            alert(`Cleanup completed: ${data.total_deleted.toLocaleString()} record(s) deleted.`);
+            if (status) {
+                status.style.color = '#32d74b';
+                status.innerHTML = `<i class="fa fa-check-circle"></i> Deleted ${data.total_deleted.toLocaleString()} record(s).`;
+            }
+            await fetchHistoryStats();
+            await executeSearch();
+            await previewCleanup();
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ff453a';
+                status.innerHTML = `<i class="fa fa-times-circle"></i> ${error.message}`;
+            }
+            alert(`Cleanup failed: ${error.message}`);
+        }
+    }
+
+    async function quickDeletePresetHours(hours, label) {
+        const status = document.getElementById('cleanup_action_status');
+        const ok = window.confirm(`Delete telemetry older than ${label.toLowerCase()} window? This cannot be undone.`);
+        if (!ok) return;
+
+        try {
+            if (status) {
+                status.style.color = '#64d2ff';
+                status.innerHTML = `<i class="fa fa-circle-o-notch fa-spin"></i> Running ${label} cleanup...`;
+            }
+            const response = await fetch(`/api/history/cleanup-hours?hours=${hours}`, { method: 'DELETE' });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Preset cleanup request failed');
+            }
+            alert(`${label} cleanup completed: ${data.total_deleted.toLocaleString()} record(s) deleted.`);
+            if (status) {
+                status.style.color = '#32d74b';
+                status.innerHTML = `<i class="fa fa-check-circle"></i> ${label} cleanup removed ${data.total_deleted.toLocaleString()} record(s).`;
+            }
+            await fetchHistoryStats();
+            await executeSearch();
+            await previewCleanup();
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ff453a';
+                status.innerHTML = `<i class="fa fa-times-circle"></i> ${error.message}`;
+            }
+            alert(`Cleanup failed: ${error.message}`);
+        }
+    }
+
+    async function quickDeletePresetDays(days, label) {
+        const status = document.getElementById('cleanup_action_status');
+        const ok = window.confirm(`Delete telemetry older than ${label.toLowerCase()} window? This cannot be undone.`);
+        if (!ok) return;
+
+        try {
+            if (status) {
+                status.style.color = '#64d2ff';
+                status.innerHTML = `<i class="fa fa-circle-o-notch fa-spin"></i> Running ${label} cleanup...`;
+            }
+            const response = await fetch(`/api/history/cleanup?days=${days}`, { method: 'DELETE' });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Preset cleanup request failed');
+            }
+            alert(`${label} cleanup completed: ${data.total_deleted.toLocaleString()} record(s) deleted.`);
+            if (status) {
+                status.style.color = '#32d74b';
+                status.innerHTML = `<i class="fa fa-check-circle"></i> ${label} cleanup removed ${data.total_deleted.toLocaleString()} record(s).`;
+            }
+            await fetchHistoryStats();
+            await executeSearch();
+            await previewCleanup();
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ff453a';
+                status.innerHTML = `<i class="fa fa-times-circle"></i> ${error.message}`;
+            }
+            alert(`Cleanup failed: ${error.message}`);
+        }
+    }
+
+    async function quickDeleteAllTelemetry() {
+        const status = document.getElementById('cleanup_action_status');
+        const ok = window.confirm('Delete ALL telemetry records from sensor and soil tables? This cannot be undone.');
+        if (!ok) return;
+
+        try {
+            if (status) {
+                status.style.color = '#64d2ff';
+                status.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Deleting all telemetry...';
+            }
+            const response = await fetch('/api/history/purge-all', { method: 'DELETE' });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Purge-all request failed');
+            }
+            alert(`All telemetry deleted: ${data.total_deleted.toLocaleString()} record(s) removed.`);
+            if (status) {
+                status.style.color = '#32d74b';
+                status.innerHTML = `<i class="fa fa-check-circle"></i> Deleted all telemetry (${data.total_deleted.toLocaleString()} record(s)).`;
+            }
+            await fetchHistoryStats();
+            await executeSearch();
+            await previewCleanup();
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ff453a';
+                status.innerHTML = `<i class="fa fa-times-circle"></i> ${error.message}`;
+            }
+            alert(`Delete all failed: ${error.message}`);
         }
     }
 
@@ -705,9 +916,15 @@
         }
     }
 
+    async function handleRetentionPolicyChange() {
+        await saveRetentionSettings();
+        await previewCleanup();
+    }
+
     // Initial load State Initialization
     fetchHistoryStats();
     loadRetentionSettings();
+    previewCleanup();
 
     // Sync initial offset with rendered rows
     function initPagination() {
@@ -719,6 +936,7 @@
             const rowCount = rows.length;
             
             currentOffset = rowCount;
+            currentFilterHours = parseInt(document.getElementById('time_filter').value);
             console.log("Initial state count:", rowCount);
             
             if (rowCount < currentLimit) {
