@@ -1,127 +1,369 @@
+````md
 # Smart Environmental Monitoring & Automated Control Platform
 
-An IoT-based real-time environmental monitoring & smart automation system for agriculture, farming, labs, & resource management.
+An advanced IoT-based real-time environmental monitoring and smart automation system designed for agriculture, farming, laboratories, smart homes, and resource-efficient environments.
 
-## What It Does
+This platform combines **ESP32 hardware**, **MQTT communication**, **FastAPI backend services**, **PostgreSQL storage**, **interactive dashboards**, and **AI-assisted predictions** to create a complete end-to-end telemetry solution.
 
-- Streams telemetry from ESP32 over MQTT.
-- Aggregates and stores sensor + soil data in PostgreSQL.
-- Shows live and historical dashboards through FastAPI templates.
-- Supports pump control (manual and auto mode).
-- Provides weather integration, PDF export, and retention cleanup APIs.
-- Includes optional ML prediction summaries from historical telemetry.
+---
 
-## Tech Stack
+## Overview
+
+Traditional monitoring often depends on manual checking, delayed responses, and guess-based decisions.
+
+This project solves that by providing:
+
+- Real-time sensor monitoring
+- Historical telemetry analytics
+- Smart irrigation automation
+- Live dashboards
+- Report generation
+- Predictive insights from historical data
+- Expandable IoT architecture
+
+---
+
+## Key Features
+
+### Real-Time Monitoring
+
+Continuously receives telemetry from ESP32 devices using MQTT.
+
+Tracks:
+
+- Temperature
+- Humidity
+- Light Intensity
+- Soil Moisture
+- Device activity status
+
+---
+
+### Smart Automation
+
+Supports intelligent control logic such as:
+
+- Auto Pump ON when soil moisture is low
+- Auto Pump OFF when moisture reaches threshold
+- Manual / Auto control modes
+- Future-ready fan automation support
+
+---
+
+### Live Dashboard
+
+Modern web dashboard with:
+
+- Real-time sensor cards
+- Weather integration
+- Prediction widgets
+- System health status
+- Telemetry charts
+- Connected device indicators
+
+---
+
+### Historical Analytics
+
+View past records with:
+
+- Date filters
+- Pagination
+- Searchable telemetry logs
+- Trend analysis
+
+---
+
+### Export Reports
+
+Generate downloadable reports in professional format:
+
+- PDF reports
+- Sensor summaries
+- Time-range based exports
+
+---
+
+### Data Retention Management
+
+Prevent database overload using smart cleanup policies:
+
+- Keep last X days
+- Auto cleanup mode
+- Storage usage stats
+- Preview deletions safely
+
+---
+
+### AI / ML Prediction Layer
+
+Uses trained models for:
+
+- Temperature trend prediction
+- Humidity forecasting
+- Irrigation recommendations
+
+---
+
+## Technology Stack
+
+### Backend
 
 - Python 3.10+
-- FastAPI + Socket.IO
-- PostgreSQL (asyncpg)
-- MQTT (aiomqtt, default broker test.mosquitto.org)
-- Jinja2 templates
-- Pandas + scikit-learn + joblib (prediction models)
+- FastAPI
+- Socket.IO
+- AsyncIO
+
+### Database
+
+- PostgreSQL
+- asyncpg
+
+### Communication
+
+- MQTT
+- aiomqtt
+
+### Frontend
+
+- HTML
+- CSS
+- JavaScript
+- Jinja2 Templates
+
+### Data / ML
+
+- Pandas
+- scikit-learn
+- joblib
+
+### Hardware
+
+- ESP32
+- DHT22 Sensor
+- LDR Sensor
+- Soil Moisture Sensor
+- Relay / Pump Module
+
+---
 
 ## Project Structure
+
+```text
 IoT-Automation-Project/
 │
-├── .venv/                      # Python virtual environment
-├── .vscode/                    # VS Code workspace settings
+├── .venv/
+├── .vscode/
 │
-├── esp32/                      # ESP32 firmware source
-│   └── esp32_client.ino        # Arduino/ESP32 IoT device code
+├── esp32/
+│   └── esp32_client.ino
 │
-├── fastapi_server/             # Main backend application
+├── fastapi_server/
 │   │
-│   ├── __pycache__/            # Python cache files
-│   │
-│   ├── ml/                     # Machine learning module
-│   │   ├── __pycache__/
-│   │   ├── models/             # Trained ML models
+│   ├── ml/
+│   │   ├── models/
 │   │   │   ├── hum_trend.pkl
 │   │   │   ├── temp_trend.pkl
 │   │   │   └── watering_model.pkl
-│   │   │
-│   │   ├── __init__.py
-│   │   ├── predict.py         # Prediction logic
-│   │   └── train.py           # Model training scripts
+│   │   ├── predict.py
+│   │   └── train.py
 │   │
-│   ├── templates/             # Frontend HTML templates
-│   │   ├── detail.html
-│   │   └── graph.html
+│   ├── templates/
+│   │   ├── graph.html
+│   │   └── detail.html
 │   │
-│   ├── __init__.py
-│   ├── database.py            # DB connection / queries
-│   ├── main.py                # FastAPI app entry point
-│   └── report_generator.py    # PDF/CSV report export
+│   ├── database.py
+│   ├── main.py
+│   └── report_generator.py
 │
-├── scratch/                   # Temporary test/debug scripts
+├── scripts/
+│   ├── create_db.py
+│   └── copy_templates.py
+│
+├── scratch/
 │   └── check_db.py
 │
-├── scripts/                   # Utility/helper scripts
-│   ├── copy_templates.py
-│   └── create_db.py
-│
-├── .env                       # Environment variables
-├── .gitignore                 # Git ignored files
-├── README.md                  # Project documentation
-├── requirements.txt           # Python dependencies
-│
-├── test_mqtt_debug.py         # MQTT debug testing
-└── test_mqtt.py               # MQTT communication testing
+├── .env
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── test_mqtt.py
+└── test_mqtt_debug.py
+````
 
-## Setup
+---
 
-1. Create and activate virtual environment.
-2. Install dependencies:
+## Installation
+
+### 1. Clone Repository
+
+```bash
+git clone <your-repo-url>
+cd IoT-Automation-Project
+```
+
+---
+
+### 2. Create Virtual Environment
+
+```bash
+python -m venv .venv
+```
+
+Activate:
+
+#### Windows
+
+```bash
+.venv\Scripts\activate
+```
+
+#### Linux / macOS
+
+```bash
+source .venv/bin/activate
+```
+
+---
+
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Ensure PostgreSQL is running and database exists (default: `home`).
-4. Configure environment variables in `.env`.
+---
 
-### Environment Variables
+### 4. Configure Environment Variables
 
-Database:
+Create `.env`
 
-- `DB_USER` (default: ``)
-- `DB_PASSWORD` (default: ``)
-- `DB_NAME` (default: ``)
-- `DB_HOST` (default: ``)
-- `DB_PORT` (default: `5432`)
+```env
+DB_USER=postgres
+DB_PASSWORD=yourpassword
+DB_NAME=home
+DB_HOST=localhost
+DB_PORT=5432
 
-MQTT and app:
+MQTT_BROKER=test.mosquitto.org
+MQTT_PORT=1883
 
-- `MQTT_BROKER` (default: `test.mosquitto.org`)
-- `MQTT_PORT` (default: `1883`)
-- `DEFAULT_CITY` (default: `Dhaka`)
-- `WEATHER_API_KEY` (required for `/weather` endpoint)
+DEFAULT_CITY=Dhaka
+WEATHER_API_KEY=your_api_key
+```
 
-## Run
+---
 
-From repository root:
+### 5. Start PostgreSQL
+
+Ensure PostgreSQL is running and database exists.
+
+---
+
+## Run Application
 
 ```bash
 uvicorn fastapi_server.main:socket_app --reload
 ```
 
-Open:
+---
 
-- `http://127.0.0.1:8000/graph` for live dashboard
-- `http://127.0.0.1:8000/detail` for historical data and retention manager
+## Open in Browser
 
-## Optional: Train ML Models
+### Live Dashboard
+
+```text
+http://127.0.0.1:8000/graph
+```
+
+### Detailed Logs / Retention Panel
+
+```text
+http://127.0.0.1:8000/detail
+```
+
+---
+
+## ESP32 Telemetry Format
+
+ESP32 publishes:
+
+```text
+temperature,humidity,light,soil
+```
+
+Example:
+
+```text
+33.20,65.10,820,48
+```
+
+---
+
+## Optional ML Training
 
 ```bash
 python -m fastapi_server.ml.train
 ```
 
-After training, prediction API:
+Prediction endpoint:
 
-- `GET /api/predict/summary`
+```text
+GET /api/predict/summary
+```
+
+---
+
+## Use Cases
+
+### Smart Agriculture
+
+* Auto irrigation
+* Soil moisture optimization
+* Climate monitoring
+
+### Smart Home
+
+* Plant care automation
+* Room environment tracking
+
+### Laboratories
+
+* Controlled condition monitoring
+
+### Warehouses
+
+* Humidity / temperature surveillance
+
+---
+
+## Future Enhancements
+
+* Smart fan automation
+* Telegram / SMS alerts
+* Multi-device node support
+* Mobile app
+* Cloud deployment
+* Advanced anomaly detection
+* Solar-powered sensor nodes
+
+---
 
 ## Notes
 
-- Database tables are auto-created on startup.
-- Background tasks now shut down gracefully with the app lifecycle.
-- Historical socket search supports proper limit/offset pagination.
+* Tables auto-create on startup
+* MQTT ingestion runs in background
+* Socket updates are real-time
+* Cleanup tools prevent DB overload
+* Easily extendable architecture
+
+---
+
+## Author
+
+**Mehadi Hasan Proman**
+
+Built with passion for IoT, automation, and intelligent systems.
+
+```
+```
