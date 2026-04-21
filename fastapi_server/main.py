@@ -50,7 +50,7 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 templates = Jinja2Templates(directory="fastapi_server/templates")
 
 # Configuration
-MQTT_BROKER = os.getenv("MQTT_BROKER", "test.mosquitto.org")
+MQTT_BROKER = os.getenv("MQTT_BROKER", "broker.hivemq.com")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 
 sensor_buffer = []
@@ -119,6 +119,7 @@ async def save_avg_sensor_data(data: dict):
 
 async def buffer_timeout_flush():
     """Periodically flush partial sensor buffer if timeout exceeded."""
+    global sensor_buffer_last_flush
     BUFFER_TIMEOUT_SECS = 30  # Flush every 30 seconds if buffer has any data
     
     while True:
@@ -207,7 +208,24 @@ async def mqtt_loop():
                                         soil_data = float(vals[3])
                                         await sio.emit("soilData", {"moisture": soil_data})
                                         await create_soil_data(soil_data)
-                                    except: pass
+                                        
+                                        # Auto irrigation logic (migrated from separated topic)
+                                        if PUMP_MODE == "AUTO":
+                                            now = time.time()
+                                            if now - last_auto_toggle_time > 10:  # 10s cooldown
+                                                if soil_data < 30.0 and current_pump_state == "OFF":
+                                                    print(f"⚠️ [AUTO IRRIGATION] Soil {soil_data}% < 30%. Triggering Pump ON")
+                                                    await client.publish("home/pump/cmd", "ON,30", qos=1)
+                                                    await log_pump_event("ON", "AUTO")
+                                                    last_auto_toggle_time = now
+                                                elif soil_data > 60.0 and current_pump_state == "ON":
+                                                    print(f"⚠️ [AUTO IRRIGATION] Soil {soil_data}% > 60%. Triggering Pump OFF")
+                                                    await client.publish("home/pump/cmd", "OFF,0", qos=1)
+                                                    await log_pump_event("OFF", "AUTO")
+                                                    last_auto_toggle_time = now
+                                                    
+                                    except Exception as e:
+                                        print(f"Error handling soil data segment: {e}")
                                 
                                 # Auto-capture device from general sensor topic if heartbeat hasn't reached us yet
                                 await update_device_status("Legacy-ESP32", 100.0, 100.0, "online")

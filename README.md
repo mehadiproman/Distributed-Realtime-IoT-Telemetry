@@ -116,7 +116,6 @@ Uses trained models for:
 ### Database
 
 - PostgreSQL  
-- asyncpg  
 
 ### Communication
 
@@ -126,7 +125,6 @@ Uses trained models for:
 ### Frontend
 
 - HTML  
-- CSS  
 - JavaScript  
 - Jinja2 Templates  
 
@@ -134,7 +132,6 @@ Uses trained models for:
 
 - Pandas  
 - scikit-learn  
-- joblib  
 
 ### Hardware
 
@@ -351,5 +348,3 @@ GET /api/predict/summary
 
 Built with passion for IoT, automation, and intelligent systems.
 
-```
-```

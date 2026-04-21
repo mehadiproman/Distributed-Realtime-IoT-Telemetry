@@ -9,7 +9,7 @@ if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 async def test_mqtt():
-    MQTT_BROKER = "test.mosquitto.org"
+    MQTT_BROKER = "broker.hivemq.com"
     MQTT_PORT = 1883
     
     print(f"Testing MQTT connection to {MQTT_BROKER}:{MQTT_PORT}...")

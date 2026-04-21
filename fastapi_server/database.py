@@ -121,19 +121,23 @@ async def init_db():
         """)
         
         # 7. Add indexes asynchronously in background (don't block startup)
-        # These improve query performance without blocking init
-        try:
-            await conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_sensor_timestamp 
-                ON sensor_data(timestamp DESC) WHERE timestamp > NOW() - interval '30 days';
-            """)
-            await conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_soil_timestamp 
-                ON soil_data(timestamp DESC) WHERE timestamp > NOW() - interval '30 days';
-            """)
-        except Exception:
-            # Indexes might already exist, safe to ignore
-            pass
+        async def create_indexes():
+            async with pool.acquire() as bg_conn:
+                try:
+                    await bg_conn.execute("""
+                        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sensor_timestamp 
+                        ON sensor_data(timestamp DESC);
+                    """)
+                    await bg_conn.execute("""
+                        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_soil_timestamp 
+                        ON soil_data(timestamp DESC);
+                    """)
+                    print("Background index creation complete")
+                except Exception as e:
+                    print(f"Index creation background task error: {e}")
+                    
+        import asyncio
+        asyncio.create_task(create_indexes())
 
 async def close_db():
     global pool
@@ -163,40 +167,30 @@ async def get_sensor_data_within_range(time_end_hrs: float, limit: int = 20, off
 
 async def get_sensor_data_with_soil_within_range(time_end_hrs: float, limit: int = 20, offset: int = 0):
     async with pool.acquire() as conn:
-        sensor_records = await conn.fetch("""
-            SELECT * FROM sensor_data
-            WHERE timestamp >= NOW() - (interval '1 hour' * $1)
-            ORDER BY timestamp DESC
+        records = await conn.fetch("""
+            SELECT 
+                sd.*, 
+                (
+                    SELECT moisture 
+                    FROM soil_data sm 
+                    WHERE sm.timestamp <= sd.timestamp 
+                    ORDER BY sm.timestamp DESC 
+                    LIMIT 1
+                ) as soil_moisture
+            FROM sensor_data sd
+            WHERE sd.timestamp >= NOW() - (interval '1 hour' * $1)
+            ORDER BY sd.timestamp DESC
             LIMIT $2 OFFSET $3;
         """, time_end_hrs, limit, offset)
 
-        soil_records = await conn.fetch("""
-            SELECT * FROM soil_data
-            WHERE timestamp >= NOW() - (interval '1 hour' * $1)
-            ORDER BY timestamp DESC;
-        """, time_end_hrs)
+        formatted_records = []
+        for r in records:
+            d = _format_record(r)
+            # Add the soil moisture scalar to the dictionary
+            d["soil_moisture"] = float(r["soil_moisture"]) if r["soil_moisture"] is not None else None
+            formatted_records.append(d)
 
-        formatted_sensors = [_format_record(record) for record in sensor_records]
-        formatted_soil = [_format_record(record) for record in soil_records]
-
-        enriched_records = []
-        soil_index = 0
-
-        for sensor_record in formatted_sensors:
-            sensor_timestamp = sensor_record.get("timestamp")
-            matched_soil = None
-
-            while soil_index < len(formatted_soil):
-                soil_timestamp = formatted_soil[soil_index].get("timestamp")
-                if not soil_timestamp or not sensor_timestamp or soil_timestamp <= sensor_timestamp:
-                    matched_soil = formatted_soil[soil_index]
-                    break
-                soil_index += 1
-
-            sensor_record["soil_moisture"] = matched_soil.get("moisture") if matched_soil else None
-            enriched_records.append(sensor_record)
-
-        return enriched_records
+        return formatted_records
 
 async def create_sensor_data(data: dict):
     query = """
@@ -486,21 +480,20 @@ async def get_system_metrics():
         
         # Last Telemetry
         last_sync = await conn.fetchval("""
-            SELECT MAX(timestamp) FROM (
-                SELECT timestamp FROM sensor_data
+            SELECT MAX(max_t) FROM (
+                SELECT MAX(timestamp) as max_t FROM sensor_data
                 UNION ALL
-                SELECT timestamp FROM soil_data
+                SELECT MAX(timestamp) as max_t FROM soil_data
             ) AS combined;
         """)
         metrics['last_sync'] = last_sync.astimezone(bst_tz) if last_sync else None
         
         # Records today (last 24h)
         metrics['records_today'] = await conn.fetchval("""
-            SELECT COUNT(*) FROM (
-                SELECT id FROM sensor_data WHERE timestamp > NOW() - interval '24 hours'
-                UNION ALL
-                SELECT id FROM soil_data WHERE timestamp > NOW() - interval '24 hours'
-            ) AS combined;
+            SELECT (
+                (SELECT COUNT(id) FROM sensor_data WHERE timestamp > NOW() - interval '24 hours') +
+                (SELECT COUNT(id) FROM soil_data WHERE timestamp > NOW() - interval '24 hours')
+            );
         """)
         
         return metrics
