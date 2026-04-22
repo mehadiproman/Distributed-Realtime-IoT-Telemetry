@@ -1,16 +1,3 @@
-/*
- * ============================================================
- *  Smart Agriculture ESP32 Firmware — Fixed & Production-Ready
- *  Fixes applied:
- *    1. Brownout detector disabled at boot
- *    2. Relay execution deferred 200ms after MQTT callback
- *    3. All heap-allocated String ops removed
- *    4. MQTT Broker switched to HiveMQ (more stable)
- *    5. Shortened ClientID (max compatibility)
- *    6. GPIO18 used for Active-Low Relay
- * ============================================================
- */
-
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>
@@ -22,40 +9,40 @@
 #include "soc/rtc_cntl_reg.h"
 #include "esp_system.h"
 
-// ─── WiFi credentials ────────────────────────────────────────────────────────
+//WiFi credentials
 const char* ssid     = "PromanQ";
 const char* password = "00000000";
 
-// ─── MQTT broker ─────────────────────────────────────────────────────────────
+//MQTT broker
 const char* mqtt_server = "broker.hivemq.com";
 const int   mqtt_port   = 1883;
 
-// ─── MQTT topics ─────────────────────────────────────────────────────────────
+//MQTT topics
 const char* mqtt_topic_data      = "home/sensors/data";
 const char* mqtt_topic_pump_cmd  = "home/pump/cmd";
 const char* mqtt_topic_pump_stat = "home/pump/status";
 
-// ─── Pin definitions ─────────────────────────────────────────────────────────
+//Pin definitions
 #define DHTPIN    13
 #define DHTTYPE   DHT22
 #define LDR_PIN   34
 #define SOIL_PIN  33
 #define RELAY_PIN 18
 
-// ─── Soil calibration ────────────────────────────────────────────────────────
+//Soil calibration
 #define SOIL_DRY 3200
 #define SOIL_WET 1000
 
 #define RELAY_EXECUTE_DELAY_MS 200
 #define TELEMETRY_INTERVAL_MS 2000
 
-// ─── Objects ─────────────────────────────────────────────────────────────────
+//Objects
 DHT              dht(DHTPIN, DHTTYPE);
 Adafruit_BMP280  bmp;
 WiFiClient       espClient;
 PubSubClient     client(espClient);
 
-// ─── Global State ────────────────────────────────────────────────────────────
+//Global State
 bool          pumpState          = false;
 bool          pumpTimerActive    = false;
 unsigned long pumpStartMillis    = 0;
@@ -67,9 +54,9 @@ volatile bool pumpCommandTargetState  = false;
 volatile int  pumpCommandDurationSecs = 0;
 unsigned long pumpCommandScheduledAt  = 0;
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Hardware control
-// ─────────────────────────────────────────────────────────────────────────────
+
+//Hardware control
+
 void setPump(bool state) {
   if (pumpState != state) {
     pumpState = state;
